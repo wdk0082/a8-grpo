@@ -1,0 +1,14 @@
+# 46 GB of LoRA checkpoints — local-only, never in git. Provenance: ckpts_archive/MANIFEST.md
+ckpts_archive/*
+!ckpts_archive/MANIFEST.md
+
+# Redundant archives (their contents are extracted under vm_snapshot/)
+*.tgz
+
+# Python / OS cruft
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Local Claude Code config (not a deliverable)
+.claude/

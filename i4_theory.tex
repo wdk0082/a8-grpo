@@ -1,0 +1,664 @@
+\subsection*{I.4 GRPO theory}
+
+\paragraph{1. Group-mean normalisation.}
+Throughout this question the actions \(a_1,\ldots,a_K\) and hence the score
+vectors \(h_i=\nabla_\theta \log \pi_\theta(a_i\mid q)\) are fixed. Only the
+rewards are random.
+
+\paragraph{(i)}
+Since \(\mathbb E[r_i]=\mu\) and \(\mathbb E[\bar r]=\mu\),
+\[
+\mathbb E[\hat A_i]
+=
+\mathbb E\left[\frac{r_i-\bar r}{\sigma}\right]
+=
+0.
+\]
+Therefore
+\[
+\mathbb E[X_i]
+=
+h_i \mathbb E[\hat A_i]
+=
+0,
+\qquad
+\mathbb E[\hat g]
+=
+\frac{1}{K}\sum_{i=1}^K \mathbb E[X_i]
+=
+0.
+\]
+This does not mean that the true policy gradient vanishes: here we have
+conditioned on fixed responses \(a_i\), and the reward randomness is independent
+of the policy. In the real policy-gradient problem the actions themselves are
+sampled from the policy, and rewards depend on those actions.
+
+\paragraph{(ii)}
+The variables \(X_i\) are dependent because all advantages contain the common
+random term
+\[
+\bar r=\frac{1}{K}\sum_{\ell=1}^K r_\ell .
+\]
+For \(i\neq j\),
+\begin{align}
+\operatorname{Cov}(X_i,X_j)
+&=
+h_i h_j^\top \,
+\operatorname{Cov}(\hat A_i,\hat A_j)  \\
+&=
+\frac{h_i h_j^\top}{\sigma^2}
+\mathbb E\big[(r_i-\bar r)(r_j-\bar r)\big].
+\end{align}
+Now
+\[
+\mathbb E[r_i r_j]=\mu^2,
+\qquad
+\mathbb E[r_i\bar r]=\mu^2+\frac{\sigma^2}{K},
+\qquad
+\mathbb E[\bar r^2]=\mu^2+\frac{\sigma^2}{K}.
+\]
+Hence
+\begin{align}
+\mathbb E[(r_i-\bar r)(r_j-\bar r)]
+&=
+\mu^2
+-
+2\left(\mu^2+\frac{\sigma^2}{K}\right)
++
+\left(\mu^2+\frac{\sigma^2}{K}\right)  \\
+&=
+-\frac{\sigma^2}{K}.
+\end{align}
+Therefore
+\[
+\boxed{
+\operatorname{Cov}(X_i,X_j)
+=
+-\frac{1}{K} h_i h_j^\top ,
+\qquad i\neq j.
+}
+\]
+The scalar coefficient is negative. Intuitively, after subtracting the group
+mean, if one reward is above the group mean then the others are, on average,
+pushed below it, since
+\[
+\sum_{i=1}^K (r_i-\bar r)=0.
+\]
+
+\paragraph{(iii)}
+First,
+\[
+\operatorname{Var}(\hat A_i)
+=
+\frac{1}{\sigma^2}\operatorname{Var}(r_i-\bar r)
+=
+1-\frac{1}{K},
+\]
+so
+\[
+\operatorname{Var}(X_i)
+=
+\left(1-\frac{1}{K}\right)h_i h_i^\top .
+\]
+Thus
+\begin{align}
+\operatorname{Var}(\hat g)
+&=
+\frac{1}{K^2}
+\left[
+\sum_{i=1}^K \operatorname{Var}(X_i)
++
+\sum_{i\neq j}\operatorname{Cov}(X_i,X_j)
+\right]  \\
+&=
+\frac{1}{K^2}
+\left[
+\left(1-\frac{1}{K}\right)\sum_{i=1}^K h_i h_i^\top
+-
+\frac{1}{K}\sum_{i\neq j}h_i h_j^\top
+\right].
+\end{align}
+Let
+\[
+H=\sum_{i=1}^K h_i,
+\qquad
+\bar h=\frac{1}{K}H.
+\]
+Since
+\[
+\sum_{i\neq j}h_i h_j^\top
+=
+HH^\top-\sum_{i=1}^K h_i h_i^\top,
+\]
+we obtain the compact form
+\[
+\boxed{
+\operatorname{Var}(\hat g)
+=
+\frac{1}{K^2}
+\left[
+\sum_{i=1}^K h_i h_i^\top
+-
+\frac{1}{K}HH^\top
+\right]
+=
+\frac{1}{K^2}
+\sum_{i=1}^K (h_i-\bar h)(h_i-\bar h)^\top .
+}
+\]
+The naive independent-sample calculation would give
+\[
+\operatorname{Var}_{\mathrm{naive}}(\hat g)
+=
+\frac{1}{K}\operatorname{Var}(X_1)
+=
+\frac{1}{K}\left(1-\frac{1}{K}\right)h_1h_1^\top ,
+\]
+which misses the negative cross-covariances induced by the shared baseline
+\(\bar r\).
+
+Because the variance is matrix-valued, a scalar effective sample size requires a
+convention. Along any direction \(u\neq 0\), define \(K_{\mathrm{eff}}(u)\) by
+\[
+u^\top \operatorname{Var}(\hat g)u
+=
+\frac{1}{K_{\mathrm{eff}}(u)}
+u^\top \operatorname{Var}(X_1)u .
+\]
+Then
+\[
+\boxed{
+K_{\mathrm{eff}}(u)
+=
+\frac{
+K^2\left(1-\frac{1}{K}\right)(u^\top h_1)^2
+}{
+\sum_{i=1}^K (u^\top h_i)^2
+-
+\frac{1}{K}\left(\sum_{i=1}^K u^\top h_i\right)^2
+}.
+}
+\]
+Equivalently, a trace-based scalar summary is
+\[
+K_{\mathrm{eff}}^{\mathrm{tr}}
+=
+\frac{
+\operatorname{tr}\operatorname{Var}(X_1)
+}{
+\operatorname{tr}\operatorname{Var}(\hat g)
+}
+=
+\frac{
+K^2\left(1-\frac{1}{K}\right)\|h_1\|^2
+}{
+\sum_{i=1}^K \|h_i\|^2
+-
+\frac{1}{K}\left\|\sum_{i=1}^K h_i\right\|^2
+}.
+\]
+For large \(K\), if the empirical variance of the score vectors is \(O(1)\),
+then \(\operatorname{Var}(\hat g)=O(1/K)\), so the effective sample size grows
+linearly in \(K\), up to constants depending on the dispersion of the \(h_i\).
+If all \(h_i\) are aligned, say \(h_i=c_i v\), then
+\[
+\operatorname{Var}(\hat g)
+=
+\frac{vv^\top}{K^2}\sum_{i=1}^K (c_i-\bar c)^2.
+\]
+Thus only variation in the magnitudes \(c_i\) contributes. If all \(h_i\) are
+identical, then \(\operatorname{Var}(\hat g)=0\), because
+\[
+\hat g
+=
+\frac{h}{K}\sum_{i=1}^K \hat A_i
+=
+0.
+\]
+
+\paragraph{2. KL-regularised policy update.}
+
+\paragraph{(i)}
+The objective is
+\[
+F(\pi)
+=
+\sum_a \pi(a)A_t(a)
+-
+\frac{1}{\eta}\sum_a \pi(a)\log\frac{\pi(a)}{\pi_t(a)}.
+\]
+Using a Lagrange multiplier \(\lambda\) for \(\sum_a \pi(a)=1\), the stationarity
+condition is
+\[
+A_t(a)
+-
+\frac{1}{\eta}
+\left(
+\log\frac{\pi(a)}{\pi_t(a)}+1
+\right)
++
+\lambda
+=
+0.
+\]
+Hence
+\[
+\log\frac{\pi(a)}{\pi_t(a)}
+=
+\eta A_t(a)+\eta\lambda-1,
+\]
+so the optimiser has the form
+\[
+\pi_{t+1}(a)
+=
+\frac{\pi_t(a)\exp(\eta A_t(a))}{Z_t},
+\qquad
+Z_t
+=
+\sum_b \pi_t(b)\exp(\eta A_t(b)).
+\]
+Thus
+\[
+\boxed{
+\pi_{t+1}(a)
+=
+\frac{\pi_t(a)\exp(\eta A_t(a))}
+{\mathbb E_{b\sim\pi_t}[\exp(\eta A_t(b))]} .
+}
+\]
+The optimiser is unique on the support of \(\pi_t\), since the objective is
+strictly concave in \(\pi\). The parameter \(\eta\) is a step-size: as
+\(\eta\to 0\), \(\pi_{t+1}\to \pi_t\); as \(\eta\) grows, the update increasingly
+concentrates mass on actions with large advantage.
+
+\paragraph{(ii)}
+Let
+\[
+J(\pi)=\mathbb E_{a\sim\pi}[A^{\pi_t}(a)].
+\]
+For the exact advantage,
+\[
+J(\pi_t)
+=
+\mathbb E_{a\sim\pi_t}[A^{\pi_t}(a)]
+=
+0.
+\]
+The objective value at \(\pi=\pi_t\) is also zero, because
+\[
+J(\pi_t)-\frac{1}{\eta}\operatorname{KL}(\pi_t\Vert\pi_t)=0.
+\]
+Since \(\pi_{t+1}\) maximises the regularised objective,
+\[
+J(\pi_{t+1})
+-
+\frac{1}{\eta}\operatorname{KL}(\pi_{t+1}\Vert\pi_t)
+\geq
+0.
+\]
+Therefore
+\[
+J(\pi_{t+1})
+\geq
+\frac{1}{\eta}\operatorname{KL}(\pi_{t+1}\Vert\pi_t)
+\geq
+0
+=
+J(\pi_t).
+\]
+Hence the update gives monotone improvement in the scalar surrogate \(J\).
+
+In neural-network GRPO this guarantee can fail because the exact optimisation
+over all distributions is replaced by stochastic gradient updates in a restricted
+parametric family, using finite-sample, noisy advantage estimates. It can also
+fail because the PPO-style clipped surrogate is not the same as the exact
+KL-regularised objective.
+
+\paragraph{(iii)}
+The clipped objective uses
+\[
+\rho_t(\theta)
+=
+\frac{\pi_\theta(a_t\mid q)}{\pi_{\mathrm{old}}(a_t\mid q)}.
+\]
+For \(\hat A_t>0\), increasing \(\rho_t\) improves the objective only until
+\(\rho_t=1+\epsilon\); beyond that, the clipped term is flat. For
+\(\hat A_t<0\), decreasing \(\rho_t\) improves the objective only until
+\(\rho_t=1-\epsilon\). Thus clipping induces a soft, samplewise trust region
+\[
+\rho_t(\theta)\in[1-\epsilon,1+\epsilon]
+\]
+in the advantage-improving direction.
+
+This differs from a joint KL trust region
+\[
+\operatorname{KL}\bigl(\pi_\theta(\cdot\mid q)\Vert
+\pi_{\mathrm{old}}(\cdot\mid q)\bigr)
+\leq \delta.
+\]
+The KL constraint is distribution-level and couples all actions through one
+global constraint. The PPO clip is local to sampled actions, is not a hard
+constraint on the full policy, and does not directly control the probability of
+unsampled actions. Consequently, the clipped objective can still allow large KL
+drift even if many sampled ratios are clipped.
+
+\paragraph{3. Mixture proposal and importance weighting.}
+
+Write
+\[
+p(a)=\pi_{\mathrm{old}}(a\mid q),
+\qquad
+u(a)=\pi_{\mathrm{unif}}(a\mid q),
+\qquad
+m(a)=\pi_{\mathrm{mix}}(a\mid q)
+=
+(1-\alpha)p(a)+\alpha u(a).
+\]
+Also write
+\[
+h_\theta(a)=\nabla_\theta\log\pi_\theta(a\mid q),
+\qquad
+R(a)=R(q,a).
+\]
+
+\paragraph{(i)}
+The old-policy target gradient has the form
+\[
+g_{\mathrm{old}}
+=
+\mathbb E_{a\sim p}
+\left[
+h_\theta(a)A_p(a)
+\right],
+\]
+where \(A_p\) denotes the old-policy advantage. Since \(m(a)>0\) whenever
+\(p(a)>0\), we can rewrite this as
+\[
+g_{\mathrm{old}}
+=
+\mathbb E_{a\sim m}
+\left[
+\frac{p(a)}{m(a)}
+h_\theta(a)A_p(a)
+\right].
+\]
+Therefore the importance weight is
+\[
+\boxed{
+w(a)
+=
+\frac{p(a)}{m(a)}
+=
+\frac{
+\pi_{\mathrm{old}}(a\mid q)
+}{
+(1-\alpha)\pi_{\mathrm{old}}(a\mid q)
++
+\alpha \pi_{\mathrm{unif}}(a\mid q)
+}.
+}
+\]
+For samples \(a_i\sim m\), the importance-corrected estimator is
+\[
+\boxed{
+\hat g_{\mathrm{mix}}
+=
+\frac{1}{K}
+\sum_{i=1}^K
+w_i
+\nabla_\theta\log\pi_\theta(a_i\mid q)
+\hat A_i^{(p)},
+}
+\]
+where \(w_i=w(a_i)\), and \(\hat A_i^{(p)}\) should be an estimate of the
+old-policy advantage, not the mixture-policy advantage.
+
+\paragraph{(ii)}
+As \(\alpha\to 0\),
+\[
+m(a)\to p(a),
+\qquad
+w(a)=\frac{p(a)}{m(a)}\to 1.
+\]
+Therefore, for the same realised actions,
+\[
+\hat g_{\mathrm{mix}}
+\to
+\frac{1}{K}
+\sum_{i=1}^K
+\nabla_\theta\log\pi_\theta(a_i\mid q)
+\hat A_i,
+\]
+which is the GRPO estimator.
+
+\paragraph{(iii-a)}
+By linearity of expectation,
+\[
+\boxed{
+V^{\pi_{\mathrm{mix}}}(q)
+=
+(1-\alpha)V^{\pi_{\mathrm{old}}}(q)
++
+\alpha V^{\pi_{\mathrm{unif}}}(q).
+}
+\]
+
+\paragraph{(iii-b)}
+The importance weights correct the outer sampling distribution, but they do not
+by themselves make the unweighted group mean \(\bar r\) estimate
+\(V^{\pi_{\mathrm{old}}}(q)\). The unweighted mean estimates
+\(V^{\pi_{\mathrm{mix}}}(q)\).
+
+The population old-policy advantage is
+\[
+A_p(a)
+=
+\frac{R(q,a)-V^{\pi_{\mathrm{old}}}(q)}
+{\sigma_p},
+\qquad
+\sigma_p^2
+=
+\operatorname{Var}_{a\sim\pi_{\mathrm{old}}(\cdot\mid q)}[R(q,a)].
+\]
+Thus the corrected estimator should use
+\[
+\boxed{
+\hat g_{\mathrm{mix}}
+=
+\frac{1}{K}
+\sum_{i=1}^K
+w_i
+\nabla_\theta\log\pi_\theta(a_i\mid q)
+\frac{r_i-V^{\pi_{\mathrm{old}}}(q)}{\sigma_p}.
+}
+\]
+If \(V^{\pi_{\mathrm{old}}}\) and \(\sigma_p\) are unknown, the natural
+importance-weighted plug-in estimates are
+\[
+\bar r_w
+=
+\frac{\sum_{j=1}^K w_j r_j}{\sum_{j=1}^K w_j},
+\qquad
+\sigma_w^2
+=
+\frac{\sum_{j=1}^K w_j(r_j-\bar r_w)^2}{\sum_{j=1}^K w_j},
+\]
+giving the reweighted advantage
+\[
+\boxed{
+\hat A_i^{(w)}
+=
+\frac{r_i-\bar r_w}{\sigma_w}.
+}
+\]
+Strict finite-\(K\) unbiasedness requires using the population
+\(V^{\pi_{\mathrm{old}}},\sigma_p\), or estimating them from an independent or
+leave-one-out batch. The self-normalised plug-in version above is consistent but
+not exactly unbiased at finite \(K\).
+
+To see the baseline issue explicitly, if one instead centres by
+\(V^{\pi_{\mathrm{mix}}}\), then
+\[
+\mathbb E_m[w h_\theta(a)(R(a)-V^{\pi_{\mathrm{mix}}})]
+=
+\mathbb E_p[h_\theta(a)(R(a)-V^{\pi_{\mathrm{old}}})]
++
+\left(
+V^{\pi_{\mathrm{old}}}-V^{\pi_{\mathrm{mix}}}
+\right)
+\mathbb E_p[h_\theta(a)].
+\]
+The second term is not generally zero unless the score is evaluated exactly
+under the same policy as the sampling distribution.
+
+\paragraph{(iv)}
+Ignoring the additional finite-\(K\) noise from estimating the baseline and
+standard deviation, define
+\[
+Y(a)=h_\theta(a)A_p(a).
+\]
+Then
+\[
+\operatorname{Var}(\hat g_{\mathrm{mix}})
+=
+\frac{1}{K}\operatorname{Var}_{a\sim m}[w(a)Y(a)],
+\qquad
+\operatorname{Var}(\hat g_{\mathrm{GRPO}})
+=
+\frac{1}{K}\operatorname{Var}_{a\sim p}[Y(a)].
+\]
+Since
+\[
+\mathbb E_m[wY]=\mathbb E_p[Y],
+\]
+the difference in second moments along any parameter direction \(v\) is
+\[
+\mathbb E_m[w^2(v^\top Y)^2]
+-
+\mathbb E_p[(v^\top Y)^2]
+=
+\mathbb E_p[(w-1)(v^\top Y)^2].
+\]
+Moreover,
+\[
+w(a)-1
+=
+\frac{p(a)-m(a)}{m(a)}
+=
+\frac{\alpha(p(a)-u(a))}{m(a)}.
+\]
+Thus mixture sampling increases the variance when the large squared advantages
+\((R(a)-V^{\pi_{\mathrm{old}}})^2\) are concentrated in regions where
+\(p(a)>u(a)\), because then \(w(a)>1\). It decreases the variance when the large
+squared advantages are concentrated in regions where \(u(a)>p(a)\), because the
+uniform component oversamples those actions and the importance weight satisfies
+\(w(a)<1\).
+
+For the raw, unweighted reward variance under the mixture,
+\[
+\operatorname{Var}_m(R)
+=
+(1-\alpha)\operatorname{Var}_p(R)
++
+\alpha \operatorname{Var}_u(R)
++
+\alpha(1-\alpha)
+\left(
+V^{\pi_{\mathrm{old}}}(q)
+-
+V^{\pi_{\mathrm{unif}}}(q)
+\right)^2.
+\]
+Therefore
+\[
+\operatorname{Var}_m(R)-\operatorname{Var}_p(R)
+=
+\alpha
+\left[
+\operatorname{Var}_u(R)
+-
+\operatorname{Var}_p(R)
++
+(1-\alpha)
+\left(
+V^{\pi_{\mathrm{old}}}(q)
+-
+V^{\pi_{\mathrm{unif}}}(q)
+\right)^2
+\right].
+\]
+So the mixture increases raw advantage variance if
+\[
+\operatorname{Var}_u(R)
++
+(1-\alpha)
+\left(
+V^{\pi_{\mathrm{old}}}(q)
+-
+V^{\pi_{\mathrm{unif}}}(q)
+\right)^2
+>
+\operatorname{Var}_p(R),
+\]
+for example if uniformly sampled responses have highly variable rewards. It
+decreases raw advantage variance if the reverse inequality holds, for example if
+the old policy samples both high- and low-reward responses but the uniform
+distribution mostly samples responses with rewards close to the old-policy mean.
+
+\paragraph{(v-a)}
+If each per-token ratio is \(c\in(0,1)\), then the full-response importance
+weight is
+\[
+w_i=c^T=\exp(T\log c).
+\]
+Since \(\log c<0\),
+\[
+\boxed{
+w_i\to 0
+\quad\text{exponentially fast as }T\to\infty.
+}
+\]
+A ratio \(c<1\) occurs for tokens whose probability is increased by the uniform
+component, i.e. when
+\[
+\pi_{\mathrm{mix}}(a_{i,t}\mid q,a_{i,<t})
+>
+\pi_{\mathrm{old}}(a_{i,t}\mid q,a_{i,<t}).
+\]
+This is typical for exploratory tokens that were unlikely under
+\(\pi_{\mathrm{old}}\), though it is not true for every token.
+
+\paragraph{(v-b)}
+Weight collapse makes the estimator unreliable because long responses receive
+exponentially small weights, causing their gradient contributions to vanish or
+underflow numerically. In the realistic case where token ratios vary across
+samples, the estimator is dominated by a small number of trajectories with
+non-negligible weights, giving very small effective sample size and high
+variance.
+
+One concrete fix is to use truncated or self-normalised importance weights, for
+example
+\[
+\tilde w_i
+=
+\frac{\min(w_i,M)}
+{\sum_{j=1}^K \min(w_j,M)}.
+\]
+This reduces variance and avoids domination by extreme weights, but it introduces
+bias because \(\tilde w_i\) no longer gives an exactly unbiased importance
+sampling estimator.
+
+Another fix is to make the proposal closer to the old policy, for example by
+using a smaller \(\alpha\), or by enforcing a per-token bound
+\[
+\left|
+\log
+\frac{\pi_{\mathrm{old}}(a_t\mid q,a_{<t})}
+{\pi_{\mathrm{mix}}(a_t\mid q,a_{<t})}
+\right|
+\leq
+\frac{\delta}{T}.
+\]
+Then the full-response log weight is bounded by \(\delta\). This preserves more
+stable weights, but trades off exploration because \(\pi_{\mathrm{mix}}\) is no
+longer allowed to move far from \(\pi_{\mathrm{old}}\).

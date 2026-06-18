@@ -1,0 +1,10 @@
+=== SWEEP START 2026-06-14T19:38:36Z  NUM_TEST_BATCHES=1319 ===
+--- [base] step=-1 start 19:38:36Z ---
+FINAL [BASE] preset=greedy source=hf n_test=1319: correct=625/1319  acc=47.38%  (95% CI 44.66-50.04)  partial=49.96%  format=4.02%
+Wrote /home/ext_wdk0082_gmail_com/grpo_runs/evals/eval_base_n1319.json
+    [base] took 735s
+--- [R0_best] step=700 start 19:50:51Z ---
+FINAL [FINETUNED step 700] preset=greedy source=hf n_test=1319: correct=616/1319  acc=46.70%  (95% CI 44.05-49.36)  partial=49.28%  format=90.67%
+Wrote /home/ext_wdk0082_gmail_com/grpo_runs/evals/eval_R0_best_n1319.json
+    [R0_best] took 808s
+--- [R0_final] step=3364 start 20:04:19Z ---
