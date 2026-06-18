@@ -1,0 +1,155 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{subcaption}
+\usepackage{caption}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+\graphicspath{{figures/}}
+\captionsetup{font=small,labelfont=bf,skip=3pt}
+\setlist[itemize]{nosep,leftmargin=1.4em,topsep=1pt}
+\titleformat{\section}{\normalfont\large\bfseries}{}{0pt}{}
+\titlespacing*{\section}{0pt}{1.3ex plus .2ex}{0.6ex}
+\setlength{\parindent}{0pt}\setlength{\parskip}{2.5pt}
+\tolerance=2000 \emergencystretch=3em \hbadness=2000
+\usepackage[htt]{hyphenat}
+\hypersetup{colorlinks=true,urlcolor=blue!55!black,linkcolor=blue!55!black}
+
+\newcommand{\wb}[1]{\href{https://wandb.ai/sichengma0514-university-of-cambridge/a8-grpo/runs/#1}{\texttt{#1}}}
+\newcommand{\axv}[2]{\href{https://arxiv.org/abs/#1}{#2}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\begin{document}
+\begin{center}
+  {\Large\bfseries Part I --- GRPO Finetuning of \texttt{gemma-3-1b-it} on GSM8K}\\[3pt]
+  {Multi-Agent Systems and Agentic AI --- Practical Examination}\\[5pt]
+  {\small Team \textbf{chmawa} (sm3035, bc654, zw499)\quad$\cdot$\quad written individually by Zixuan Wang (zw499)}\\[3pt]
+  {\small\itshape Jointly owned (shared team work): the v6e-1 TPU, the seven shared GRPO runs (\texttt{bdbugenj} and R0--R5), and the code repository.
+  All prose, figure selection and interpretation below are my own.}\\[3pt]
+  {\small Code: \href{https://github.com/wdk0082/a8-grpo}{\texttt{github.com/wdk0082/a8-grpo}} \emph{(to be ported to GitLab for submission)}\;$\mid$\;
+  W\&B: \href{https://wandb.ai/sichengma0514-university-of-cambridge/a8-grpo}{\texttt{a8-grpo}}\;$\mid$\;
+  \axv{2402.03300}{GRPO}, \axv{2503.14476}{DAPO}, \axv{2106.09685}{LoRA}, \href{https://huggingface.co/datasets/openai/gsm8k}{GSM8K}}
+\end{center}
+\vspace{1pt}\hrule\vspace{4pt}
+
+\section*{I.1\quad Reproducing the baseline}
+\textbf{(i) The run.} Shared baseline run (\wb{bdbugenj}): upstream commit
+\href{https://github.com/borisbolliet/tpu-2026}{\texttt{borisbolliet/tpu-2026@77c5a67}}, unmodified \code{config.py},
+full \textbf{3364} GRPO steps (one epoch), \textbf{4\,h\,43\,m} wall-clock on \code{v6e-1}.
+
+\textbf{(ii) Accuracy.} GSM8K \emph{test} split (materialised from TFDS, shuffle seed 42, $n{=}64$, greedy, exact numeric match).
+Base \code{gemma-3-1b-it}: \textbf{51.6\%}; LoRA checkpoint \textbf{28.1\%} at its best \emph{surviving} step (2000; \code{bdbugenj}'s earlier, better checkpoints were pruned) and \textbf{3.1\%} at step 3364.
+The baseline \emph{over-optimises}: exact-match correctness falls $52\!\to\!28\!\to\!6\!\to\!3$\% across steps $0/2000/3000/3364$ while the
+format-shaping reward saturates (it reward-hacks the template). At $n{=}64$ the CI is $\pm12$\,pt, so we firm the base figure to
+\textbf{47.4\%} on the full 1319-example test in I.3.
+
+\textbf{(iii) Training curves.} Fig.~\ref{fig:rewardkl} (grey = baseline): mean reward $\bar r$ peaks $\approx$\,step 450 then declines, and
+$\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ rises $0.16\!\to\!{\sim}0.5$ with late spikes --- the textbook over-optimisation arc.
+
+\textbf{Baseline patches} (as-shipped fixes; full diff: \code{tpu-2026\_our\_changes.patch} in repo).
+(1) \code{run\_tmux.sh} hard-coded a foreign home path; (2) the W\&B entity defaulted to a third party --- redirected to \code{a8-grpo};
+(3) \code{evaluate.py} built a fresh $B{=}0$ LoRA and never restored a checkpoint, so it could only score \emph{base} --- we added Orbax
+\code{--step}/\code{--ckpt-dir} LoRA restore; (4) TFDS's gsm8k builder crashes under protobuf 7.x once JAX imports, so we pre-materialise
+the seed-42 test split (\code{prepare\_test\_tfds.py}) and added an HF \code{datasets} fallback.
+
+\section*{I.2\quad Understanding the baseline}
+\textbf{(a) Policies \& trainable parameters.} $\pi_\theta$ is the LoRA-adapted policy: frozen \code{gemma-3-1b-it} weights plus low-rank
+adapters $\Delta W{=}BA$; \textbf{only $A,B$ are trainable} (the base is frozen). $\pi_{\mathrm{old}}$ is the policy that generated the current
+rollouts --- with \code{NUM\_ITERATIONS} $\mu{=}1$ there is one gradient step per rollout batch, so $\pi_{\mathrm{old}}{=}\pi_\theta$ at the update.
+$\pi_{\mathrm{ref}}$ is the frozen initial policy for the KL penalty; LoRA initialises $B{=}0$, so $\pi_\theta{=}\pi_{\mathrm{ref}}$ exactly at step 0.
+
+\textbf{(b) Group size \& estimator.} $K{=}$\code{NUM\_GENERATIONS}$=2$. Tunix uses \code{advantage\_estimator='grpo'}: the \textbf{standard}
+group-mean, std-normalised advantage $\hat A_i{=}(r_i-\bar r)/\sigma_r$ with $\bar r,\sigma_r$ over all $K$ samples \emph{including} $i$ --- \emph{not}
+leave-one-out.
+
+\textbf{(c) Shaping vs.\ correctness rewards.} Shaping: \code{match\_format\_exactly} and \code{match\_format\_approximately} (reward the
+\code{<reasoning>}/\code{<answer>} template). True correctness: \code{check\_answer} and \code{check\_numbers} (extracted number vs.\ gold).
+With the correctness reward \emph{alone}, an early policy is almost never numerically right, so every sample in a group scores $\approx 0$:
+within-group $\sigma_r\!\to\!0$ and $\hat A_i{=}(r_i-\bar r)/\sigma_r$ has no signal (an $\varepsilon$ in the denominator averts a literal $0/0$) --- degenerate groups, no gradient. The shaping terms give
+differently-formatted samples different rewards, restoring $\sigma_r>0$ and a usable advantage that bootstraps learning (the same
+$\sigma_r\!\to\!0$ degeneracy analysed in I.4 Q1).
+
+\textbf{(d) Clipped surrogate \& $\epsilon$.} The PPO-style clip lives in Tunix's \code{GRPOLearner} (module \code{tunix.rl}), in its clipped policy-gradient loss: it forms a
+\textbf{per-token} ratio $\rho_t{=}\pi_\theta(a_t)/\pi_{\mathrm{old}}(a_t)$ and optimises $\min\!\big(\rho_t\hat A,\ \mathrm{clip}(\rho_t,1{-}\epsilon,1{+}\epsilon)\hat A\big)$,
+with $\epsilon{=}$\code{EPSILON}$=0.2$. Two deviations from the lecture form: (i) the ratio is \textbf{per-token}, not per-sequence; (ii) at
+$\mu{=}1$, $\pi_{\mathrm{old}}{=}\pi_\theta\Rightarrow\rho_t\equiv1$, so the clip is \textbf{dormant} in the baseline (it engages only for $\mu>1$).
+
+\section*{I.3\quad Improving on the baseline}
+\textbf{Modification \& motivation.} The baseline over-optimises at $K{=}2$. The theory of I.4 Q1 gives the GRPO gradient variance
+$\operatorname{Var}(\hat g)=K^{-2}\sum_i(h_i-\bar h)(h_i-\bar h)^\top=O(1/K)$, with effective sample size $K_{\mathrm{eff}}\!\propto\!K$: a larger
+group directly lowers the variance of the gradient estimate $\hat g$. We therefore take \textbf{group size $G$} (the $K$ of I.2(b) and the theory) as the primary lever and run a controlled
+$\beta\times G$ \textbf{2$\times$2} (KL-penalty weight $\times$ group size) to separate it from the KL leash:
+R4$(G2,\beta0)$, R0$(G2,\beta.08$; baseline re-run$)$, R3b$(G8,\beta0)$, R5$(G8,\beta.08)$ --- plus single-axis controls R1$(\beta{=}0.3)$ and
+R2$(+\text{soft length penalty})$, for \textbf{six full runs}. All share data (HF GSM8K, seed 42), eval, horizon (3364 steps) and a seed-matched
+rollout RNG (\code{PRNGKey(0)}); only the named knob changes per run. R0 re-runs the baseline config with \emph{dense} checkpoints, so its best-val
+$46.7\%$ recovers the peak that \code{bdbugenj}'s pruning hid behind I.1's $28.1\%$.
+
+\begin{table}[t]
+\centering\small
+\caption{Held-out accuracy on the \emph{full} GSM8K test ($n{=}1319$; HF and TFDS differ only in seed-42 ordering, so at full $n$ the I.1$\to$I.3 source switch is immaterial), greedy/exact-match, $\pm$95\% bootstrap CI.
+Last column: \emph{paired} bootstrap $\Delta$ vs.\ base over the shared prompts (\code{paired\_ci.py}).
+$\ast$ = paired 95\% CI excludes 0; $\dagger$ = collapse. R1$(G2,\beta.3)$ and R2$(G2,+\text{len})$ fell \emph{below} base
+(R1 best 37.2 / final 0.0; R2 best 32.8 / final 40.6) --- clean negative results.}
+\label{tab:acc}
+\begin{tabular}{llrrr}
+\toprule
+Model & $(G,\beta)$, step & Acc.\,(\%) & 95\% CI & $\Delta$ base (paired) \\
+\midrule
+Base \code{gemma-3-1b-it} & --- & 47.4 & 44.7--50.0 & --- \\
+R0 (baseline re-run) & $(2,.08)$ best 700 & 46.7 & 44.0--49.4 & $-0.7$\ \,n.s. \\
+R0 & $(2,.08)$ final 3364 & 6.2 & 4.9--7.5 & $-41.2^{\dagger}$ \\
+R4 & $(2,0)$ best 1300 & 52.8 & 50.1--55.5 & $+5.4^{\ast}$ \\
+R4 & $(2,0)$ final 3364 & 48.6 & 45.9--51.3 & $+1.2$\ \,n.s. \\
+\textbf{R3b} & $(8,0)$ best 1000 & 55.7 & 53.0--58.2 & $+8.3^{\ast}$ \\
+\textbf{R3b} & $(8,0)$ \textbf{final 3364} & \textbf{57.2} & 54.6--59.9 & $+9.9^{\ast}$ \\
+R5 & $(8,.08)$ best 1300 & 53.4 & 50.7--56.2 & $+6.1^{\ast}$ \\
+R5 & $(8,.08)$ final 3364 & 55.6 & 52.8--58.2 & $+8.2^{\ast}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.86\linewidth]{F1_reward_kl.pdf}
+\caption{Mean training reward $\bar r$ (top) and $\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ (bottom) vs.\ GRPO step, baseline and all
+variants on shared axes. Baseline/R0/R1 over-optimise (reward peaks then collapses; KL spikes); the $G{=}8$ runs (R3b, R5) and R4 stay stable.}
+\label{fig:rewardkl}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\begin{subfigure}{0.49\linewidth}\centering\includegraphics[width=\linewidth]{F4_2x2_GxB.pdf}\caption{$\beta\times G$ 2$\times$2 (best/final acc).}\label{fig:2x2}\end{subfigure}\hfill
+\begin{subfigure}{0.49\linewidth}\centering\includegraphics[width=\linewidth]{S3_group_degeneracy.pdf}\caption{Group degeneracy at $G{=}8$.}\label{fig:diag}\end{subfigure}
+\caption{\emph{Left:} accuracy by $(G,\beta)$ --- collapse occurs \emph{only} at $G{=}2,\beta{>}0$ (R0). \emph{Right:} the diagnostic --- at $G{=}8$ about a
+third of groups are degenerate (all-$K$ rewards equal) yet $\sigma_r$ holds $\approx1.5$ (steady, not $\to0$).}
+\end{figure}
+
+We report \textbf{(a)} held-out accuracy (Table~\ref{tab:acc}), \textbf{(b)} mean reward and KL for all runs on shared axes (Fig.~\ref{fig:rewardkl}), and \textbf{(c)} a diagnostic for a known GRPO failure mode --- group degeneracy at $G{=}8$ (Fig.~\ref{fig:diag}).
+
+\textbf{(d) Findings vs.\ theory.} \emph{$G{=}8$ is the winning intervention.} Both $G{=}8$ runs beat base --- R3b $+9.9$, R5 $+8.2$\,pp, paired CIs
+excluding 0 --- and each beats its matched $G{=}2$ run (R3b$-$R4 $=+8.6$\,pp at final; R5$-$R0 $=+49$\,pp). \textbf{R3b ($G{=}8,\beta{=}0$) is the best
+model at 57.2\%.} The 2$\times$2 (Fig.~\ref{fig:2x2}) localises the failure: \emph{the collapse is confined to the $G{=}2,\beta{>}0$ corner} (R0 final
+6.2\%, R1 0\%), while the \emph{same} $\beta{=}0.08$ at $G{=}8$ (R5) is stable, and at $G{=}8$ the KL weight is statistically irrelevant
+(R3b vs.\ R5: $+1.7$\,pp, n.s.). Furthermore \emph{over-optimisation is itself a $G{=}2$ phenomenon}: $G{=}2$ peaks at best-val then degrades
+(R4 $52.8\!\to\!48.6$; R0 collapses), whereas \textbf{$G{=}8$ improves monotonically to the final step} (final $>$ best). This is precisely the I.4 Q1
+mechanism: larger $K$ shrinks $\operatorname{Var}(\hat g)$, so updates are smoother --- the policy neither reward-hacks into R0's format-only
+collapse nor (once $\beta{>}0$) trips the $\exp(\log\text{-ratio})$ KL-estimator instability behind R1's blow-up.
+
+\emph{Contradicted prediction.} We predicted an over-optimising baseline would need a \emph{tighter} KL leash. The opposite held: raising $\beta$ to
+$0.3$ (R1) collapsed \emph{faster} (0\%), and removing the KL term entirely (R4, $\beta{=}0$) was fine --- the cure was variance reduction (group size),
+not regularisation, echoing DAPO's removal of the KL term for long-output RL. The diagnostic (Fig.~\ref{fig:diag}) shows the cost of
+$G{=}8$: $\approx\!\tfrac13$ of groups are degenerate (all-$K$-equal $\Rightarrow$ zero advantage), the $K_{\mathrm{eff}}$/dead-group issue of I.4 Q1 and
+the target of DAPO's Dynamic Sampling --- yet the net effect of more rollouts is still $+8$--$10$\,pp. R1 and R2 fell below base (Table~\ref{tab:acc}),
+honest negative results that further support variance, not extra shaping or a stronger leash, as the operative lever.
+
+\clearpage
+\input{i4_theory}
+
+\end{document}

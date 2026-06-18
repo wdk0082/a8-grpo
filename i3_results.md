@@ -67,11 +67,11 @@ n=1319, best-val / final accuracy:
 ## Training dynamics (`figures/`)
 - **F1 reward+KL:** R0 = textbook over-optimisation arc; **R1 collapses ~step 1700** (length→~20 tok, KL spike); R4 = highest reward, low KL, stable.
 - **S2 length + entropy proxy:** R0 length blows up to ~630 then declines; **R2 length NOT controlled** (~400–500); R1 length collapses ~1700; R4 stable ~300. *Entropy proxy = `actor/train/perplexity` ≈ exp(per-token entropy)* — monotonic proxy; true vocab entropy not logged.
-- **F3 KL-vs-eval-reward frontier:** early/low-KL = high held-out reward; R1 trails out to KL≈21 with **negative** reward (the collapse).
+- **F3 KL-vs-eval-reward frontier:** early/low-KL = high held-out reward; R1 trails out to KL≈32 with **negative** reward (the collapse).
 - **S1 reward decomposition (2×2 per run):** format (shaping) terms dominate early while correctness terms stay flat; R0/R1 components degrade into collapse; R2's `length_penalty` term is visible and small.
 
 ## The β paradox — strongest KL penalty, yet KL *explodes*
-β is the KL-penalty weight (`loss = −J_clip + β·KL(πθ‖π_ref)`): R1 β=.3 strongest, R0 .08, R4 0. Naively bigger β → nearer ref → lower KL, yet **R1's KL exploded (~21) while R4 (β=0) stayed low**. Why:
+β is the KL-penalty weight (`loss = −J_clip + β·KL(πθ‖π_ref)`): R1 β=.3 strongest, R0 .08, R4 0. Naively bigger β → nearer ref → lower KL, yet **R1's KL exploded (peak ~32.5) while R4 (β=0) stayed low**. Why:
 - β is a **soft** penalty, not a hard cap — makes drift costly, doesn't forbid it.
 - The explosion is a **numerical instability**, not gradual drift: Tunix's KL estimator has an `exp(log-ratio)` term that saturates/overflows when the policy lurches (`kl_clamp_value`, off by default, bounds it). A **larger β multiplies the blown-up KL gradient** → bigger destabilising kick → collapse. Strong β *amplified* the instability.
 - Partly a **symptom**: once R1 collapsed to degenerate ~20-tok outputs (~step 1700), measured KL-to-ref spikes.
