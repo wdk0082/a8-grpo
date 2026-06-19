@@ -2,6 +2,19 @@
 
 Running log of changes to the Part I report and supporting docs. Newest first.
 
+## 2026-06-19
+
+### I.4 swapped to the revised version; report is now a single self-contained `.tex`
+- Replaced the original I.4 with **`i4_theory_revised.tex`** and **inlined** it into `report_part1.tex` (no more `\input` — one self-contained file). Added the top-level `\section*{I.4 …}` heading (the revised file starts directly at subsection I.4.1). Clean build; still **9 pp** (I.1–I.3 on 1–3, revised I.4 on 4–9).
+- `i4_theory.tex` (original) and `i4_theory_revised.tex` remain in the repo (no longer referenced by the report; kept for history).
+- Gotcha logged: a first build mangled `\end{document}` → `␛nd{document}` because **zsh `echo` turns `\e` into an ESC byte (0x1B)**; rebuilt with `printf '%s'` (no escape processing).
+
+### Revised vs original I.4 — the revised is better
+- **Structure**: numbered subsections I.4.1/2/3 (vs one section + "1./2./3." paragraphs).
+- **Concision** (I.4 penalises verbosity): ~1.2 KB shorter; drops the redundant trace-based `K_eff` (keeps the directional one, which is what the question asks for).
+- **More rigorous**: Q1(ii) cleaner `Cov` via bilinearity + sharper "sign" statement; Q1(iii) cleaner `K_eff(u)` ratio + iid sanity-check + Θ(K); Q2(i) adds the small-η first-order expansion (shows η as a step-size); Q2(iii) explicit clip case-form; **Q3(iii-b)** the big upgrade — proves a deterministic baseline shift is unbiased (`E_p[s_θ]=0`), explains why weights alone don't fix group normalisation, and adds the **literally-unbiased leave-one-out Horvitz–Thompson baseline**; Q3(iv) matrix-form variance difference + explicit "no universal ordering".
+- **No correctness regressions** (spot-checked the new derivations).
+
 ## 2026-06-18
 
 ### Rename
