@@ -4,6 +4,9 @@ Running log of changes to the Part I report and supporting docs. Newest first.
 
 ## 2026-06-20
 
+### I.4.1 Q1(i) — explicit steps + conditioning convention
+- Per request, expanded only Q1(i) (both `report/report_part1.tex` and `i4_theory_revised.tex`): added the skipped intermediate steps for $\mathbb{E}[X_i]=h_i\mathbb{E}[\hat A_i]=0$ and $\mathbb{E}[\hat g]=\tfrac1K\sum\mathbb{E}[X_i]=0$, and made the explanation state the convention $\mathbb{E}[\,\cdot\,]\equiv\mathbb{E}[\,\cdot\mid a_1,\dots,a_K]$ (all expectations conditional on the fixed actions). The $\mathbb{E}[\hat A_i]$ line and (ii)/(iii) left untouched. Clean build, 9 pp.
+
 ### I.4.1 Q1(iii) replaced with the user-supplied trace-based version
 - Swapped the Q1(iii) answer (effective sample size) in **both** `report/report_part1.tex` and `i4_theory_revised.tex` for the version the user supplied verbatim ("use exactly this"). Recompiled clean — still **9 pp**; I.1–I.3 untouched on pp.1–3; the new (iii) sits in I.4.1 on pp.4–5. No overfull boxes / missing chars.
 - **What changed vs the previous (directional) (iii)**: it now adopts the **lecture scalar-variance convention** $\operatorname{Var}_{\mathrm{tr}}(Z):=\operatorname{tr}(\operatorname{Cov}(Z))$, giving a single *scalar* $K_{\mathrm{eff}}=K(K-1)\lVert h_1\rVert^2/\sum_i\lVert h_i-\bar h\rVert^2$ in place of the per-direction $K_{\mathrm{eff}}(u)$. Retains the full matrix $\operatorname{Cov}(\hat g)=K^{-2}\sum_i(h_i-\bar h)(h_i-\bar h)^\top$, the iid sanity-check ($\operatorname{Var}_{\mathrm{tr,iid}}=\tfrac1K\operatorname{Var}_{\mathrm{tr}}(X_1)$), the $\Theta(K)$ growth result, the collinear $h_i=c_iv$ case, and the $h_i=h\Rightarrow K_{\mathrm{eff}}=\infty$ degenerate case.

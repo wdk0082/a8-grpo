@@ -165,16 +165,36 @@ Since $\mathbb{E}[r_i]=\mathbb{E}[\bar r]=\mu$,
 \frac{\mathbb{E}[r_i-\bar r]}{\sigma}
 =0.
 \]
-Therefore
+Because $X_i=h_i\hat A_i$ and $h_i$ is fixed, linearity of expectation gives
 \[
-\boxed{\mathbb{E}[X_i]=0},
+\mathbb{E}[X_i]
+=
+h_i\,\mathbb{E}[\hat A_i]
+=
+h_i\cdot 0
+=0,
+\qquad
+\boxed{\mathbb{E}[X_i]=0}.
+\]
+Summing over the group and again using linearity,
+\[
+\mathbb{E}[\hat g]
+=
+\mathbb{E}\!\left[\frac{1}{K}\sum_{i=1}^K X_i\right]
+=
+\frac{1}{K}\sum_{i=1}^K\mathbb{E}[X_i]
+=
+\frac{1}{K}\sum_{i=1}^K 0
+=0,
 \qquad
 \boxed{\mathbb{E}[\hat g]=0}.
 \]
-Here the responses are conditioned on and treated as fixed, while the artificial
-reward noise is independent of them. In the usual policy-gradient problem the
-responses are sampled from the policy and their rewards depend on the sampled
-responses, so the policy gradient need not vanish.
+Every expectation in this question is taken conditional on the sampled
+responses $a_1,\dots,a_K$, which are held fixed; that is, $\mathbb{E}[\,\cdot\,]$
+abbreviates $\mathbb{E}[\,\cdot\mid a_1,\dots,a_K]$, so each score $h_i$ is
+constant and only the artificial reward noise is random. In the usual
+policy-gradient problem the responses are sampled from the policy and their
+rewards depend on the sampled responses, so the policy gradient need not vanish.
 
 \paragraph{(ii)}
 The common random term is the sample mean $\bar r$, appearing in every
