@@ -61,105 +61,146 @@ The negative dependence follows from the exact constraint
 if one centred reward increases, the others must collectively decrease.
 
 \paragraph{(iii)}
-For $i=j$,
+The full covariance matrix is
 \[
-\operatorname{Var}(r_i-\bar r)
+\boxed{
+\operatorname{Cov}(\hat g)
 =
-\sigma^2-\frac{\sigma^2}{K},
-\]
-and therefore
-\[
-\operatorname{Var}(X_i)
-=
-\left(1-\frac{1}{K}\right)h_i h_i^\top.
-\]
-Using all diagonal and cross-covariance terms,
-\begin{align*}
-\operatorname{Var}(\hat g)
-&=
-\frac{1}{K^2}
-\sum_{i,j=1}^K
-\operatorname{Cov}(X_i,X_j)\\
-&=
 \frac{1}{K^2}
 \left[
 \sum_{i=1}^K h_i h_i^\top
--\frac{1}{K}
+-
+\frac{1}{K}
 \left(\sum_{i=1}^K h_i\right)
 \left(\sum_{j=1}^K h_j\right)^\top
-\right].
-\end{align*}
-Equivalently,
-\[
-\boxed{
-\operatorname{Var}(\hat g)
+\right]
 =
 \frac{1}{K^2}
 \sum_{i=1}^K
-(h_i-\bar h)(h_i-\bar h)^\top.
+(h_i-\bar h)(h_i-\bar h)^\top .
 }
 \]
-By contrast, the mean of $K$ independent copies of $X_1$ would have covariance
+
+For the scalar variance convention used in the lectures, define
 \[
-\operatorname{Var}_{\mathrm{iid}}(\hat g)
+\operatorname{Var}_{\mathrm{tr}}(Z)
+:=
+\operatorname{tr}\!\left(\operatorname{Cov}(Z)\right).
+\]
+Taking the trace gives
+\[
+\boxed{
+\operatorname{Var}_{\mathrm{tr}}(\hat g)
 =
-\frac{1}{K}\operatorname{Var}(X_1)
+\frac{1}{K^2}
+\sum_{i=1}^K
+\|h_i-\bar h\|^2.
+}
+\]
+Also,
+\[
+\operatorname{Cov}(X_1)
 =
-\frac{1}{K}
-\left(1-\frac{1}{K}\right)h_1h_1^\top.
+\left(1-\frac{1}{K}\right)h_1h_1^\top,
+\]
+and hence
+\[
+\operatorname{Var}_{\mathrm{tr}}(X_1)
+=
+\left(1-\frac{1}{K}\right)\|h_1\|^2.
+\]
+If one instead averaged $K$ independent copies of $X_1$, the naive i.i.d.
+variance would be
+\[
+\operatorname{Var}_{\mathrm{tr,iid}}(\hat g)
+=
+\frac{1}{K}\operatorname{Var}_{\mathrm{tr}}(X_1).
 \]
 
-Since these are matrix-valued variances, there is no canonical scalar effective
-sample size. For a direction $u\in\mathbb{R}^d$ with
-$u^\top\operatorname{Var}(\hat g)u>0$, define
+Following the lecture convention, define the effective sample size by
 \[
-K_{\mathrm{eff}}(u)
+\operatorname{Var}_{\mathrm{tr}}(\hat g)
+=
+\frac{\operatorname{Var}_{\mathrm{tr}}(X_1)}
+{K_{\mathrm{eff}}}.
+\]
+Therefore
+\[
+\boxed{
+K_{\mathrm{eff}}
 =
 \frac{
-u^\top\operatorname{Var}(X_1)u
+\operatorname{Var}_{\mathrm{tr}}(X_1)
 }{
-u^\top\operatorname{Var}(\hat g)u
+\operatorname{Var}_{\mathrm{tr}}(\hat g)
+}
+=
+\frac{
+K^2\left(1-\frac{1}{K}\right)\|h_1\|^2
+}{
+\sum_{i=1}^K\|h_i-\bar h\|^2
+}
+=
+\frac{
+K(K-1)\|h_1\|^2
+}{
+\sum_{i=1}^K\|h_i-\bar h\|^2
 }.
+}
+\]
+Equivalently, its discrepancy from the nominal sample size $K$ is
+\[
+\frac{K_{\mathrm{eff}}}{K}
+=
+\frac{
+\operatorname{Var}_{\mathrm{tr,iid}}(\hat g)
+}{
+\operatorname{Var}_{\mathrm{tr}}(\hat g)
+}.
+\]
+
+If
+\[
+\frac{1}{K}\sum_{i=1}^K\|h_i-\bar h\|^2
+\]
+remains of constant order and $\|h_1\|^2=O(1)$, then
+\[
+K_{\mathrm{eff}}=\Theta(K)
+\]
+as $K\to\infty$.
+
+If all score vectors lie in one direction, write
+\[
+h_i=c_i v.
 \]
 Then
 \[
-\boxed{
-K_{\mathrm{eff}}(u)
-=
-\frac{
-K^2\left(1-\frac{1}{K}\right)(u^\top h_1)^2
-}{
-\sum_{i=1}^K
-\left(u^\top(h_i-\bar h)\right)^2
-}.
-}
-\]
-This definition gives $K_{\mathrm{eff}}(u)=K$ for the mean of $K$ genuinely
-independent copies of $X_1$.
-
-If the empirical directional dispersion
-\[
-\frac{1}{K}\sum_{i=1}^K
-\left(u^\top(h_i-\bar h)\right)^2
-\]
-converges to a positive constant, then $K_{\mathrm{eff}}(u)=\Theta(K)$.
-If all scores are collinear, $h_i=c_i v$, then
-\[
-\operatorname{Var}(\hat g)
+\operatorname{Cov}(\hat g)
 =
 \frac{vv^\top}{K^2}
-\sum_{i=1}^K(c_i-\bar c)^2.
+\sum_{i=1}^K(c_i-\bar c)^2,
 \]
-Thus only variation in the coefficients $c_i$ contributes. In particular, if
-all $h_i$ are identical, then
+so the covariance has rank at most one, and
+\[
+K_{\mathrm{eff}}
+=
+\frac{
+K(K-1)c_1^2
+}{
+\sum_{i=1}^K(c_i-\bar c)^2
+}.
+\]
+Thus only variation in the scalar coefficients $c_i$ contributes to the
+variance. In the special case $h_i=h$ for every $i$,
 \[
 \hat g
 =
-\frac{h_1}{K}\sum_{i=1}^K\hat A_i
+\frac{h}{K}\sum_{i=1}^K\hat A_i
 =0
 \]
-for every reward realisation, so $\operatorname{Var}(\hat g)=0$ and the
-directional effective sample size is formally infinite.
+for every reward realisation. Hence
+$\operatorname{Cov}(\hat g)=0$ and, provided $h\neq0$, the effective sample size
+is formally infinite.
 
 
 \subsection*{I.4.2 KL-regularised policy update}

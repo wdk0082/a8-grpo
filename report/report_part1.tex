@@ -30,7 +30,7 @@
   {\Large\bfseries Part I --- GRPO Finetuning of \texttt{gemma-3-1b-it} on GSM8K}\\[3pt]
   {Multi-Agent Systems and Agentic AI --- Practical Examination}\\[5pt]
   {\small Team \textbf{chmawa} (sm3035, bc654, zw499)\quad$\cdot$\quad written individually by Zixuan Wang (zw499)}\\[3pt]
-  {\small\itshape Jointly owned (shared team work): the v6e-1 TPU, the seven shared GRPO runs (\texttt{bdbugenj} and R0--R5), and the code repository.
+  {\small\itshape Jointly owned (shared team work): the v6e-1 TPU, the six shared GRPO runs R0--R5, and the code repository.
   All prose, figure selection and interpretation below are my own.}\\[3pt]
   {\small Code: \href{https://github.com/wdk0082/a8-grpo}{\texttt{github.com/wdk0082/a8-grpo}} \emph{(to be ported to GitLab for submission)}\;$\mid$\;
   W\&B: \href{https://wandb.ai/sichengma0514-university-of-cambridge/a8-grpo}{\texttt{a8-grpo}}\;$\mid$\;
@@ -39,24 +39,25 @@
 \vspace{1pt}\hrule\vspace{4pt}
 
 \section*{I.1\quad Reproducing the baseline}
-\textbf{(i) The run.} Shared baseline run (\wb{bdbugenj}): upstream commit
-\href{https://github.com/borisbolliet/tpu-2026}{\texttt{borisbolliet/tpu-2026@77c5a67}}, unmodified \code{config.py},
-full \textbf{3364} GRPO steps (one epoch), \textbf{4\,h\,43\,m} wall-clock on \code{v6e-1}.
+\textbf{(i) The run.} We reproduce the baseline as run \textbf{R0} (\wb{8c2785ut}): upstream commit
+\href{https://github.com/borisbolliet/tpu-2026}{\texttt{borisbolliet/tpu-2026@77c5a67}} with the \code{config.py} defaults
+($\beta{=}0.08$, $G{=}2$), full \textbf{3364} GRPO steps (one epoch), \textbf{$\sim$5\,h\,05\,m} wall-clock on \code{v6e-1}.
 
-\textbf{(ii) Accuracy.} GSM8K \emph{test} split (materialised from TFDS, shuffle seed 42, $n{=}64$, greedy, exact numeric match).
-Base \code{gemma-3-1b-it}: \textbf{51.6\%}; LoRA checkpoint \textbf{28.1\%} at its best \emph{surviving} step (2000; \code{bdbugenj}'s earlier, better checkpoints were pruned) and \textbf{3.1\%} at step 3364.
-The baseline \emph{over-optimises}: exact-match correctness falls $52\!\to\!28\!\to\!6\!\to\!3$\% across steps $0/2000/3000/3364$ while the
-format-shaping reward saturates (it reward-hacks the template). At $n{=}64$ the CI is $\pm12$\,pt, so we firm the base figure to
-\textbf{47.4\%} on the full 1319-example test in I.3.
+\textbf{(ii) Accuracy.} Held-out GSM8K \emph{test}, HF split, fixed seed 42, greedy/exact-match. We report both the \code{config.py} default
+$n{=}64$ and the full $n{=}1319$ (for completeness; I.3 standardises on the full test) as \emph{($n{=}64$\,/\,$n{=}1319$)}: base
+\textbf{45.3\,/\,47.4\%}; R0 best-val \textbf{42.2\,/\,46.7\%} (step 700) and final \textbf{0.0\,/\,6.2\%} (step 3364). At either $n$ the baseline
+\emph{over-optimises} --- R0 stays within noise of base then collapses by the final step (the format reward saturates while correctness decays);
+the wide $n{=}64$ CIs ($\pm$12\,pt) are why I.3 uses the full test (per-checkpoint CIs in Table~\ref{tab:acc}).
 
-\textbf{(iii) Training curves.} Fig.~\ref{fig:rewardkl} (grey = baseline): mean reward $\bar r$ peaks $\approx$\,step 450 then declines, and
-$\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ rises $0.16\!\to\!{\sim}0.5$ with late spikes --- the textbook over-optimisation arc.
+\textbf{(iii) Training curves.} Fig.~\ref{fig:rewardkl} (R0, black): mean reward $\bar r$ rises, peaks $\approx$\,step 1000, then declines
+to ${\sim}0.5$; $\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ climbs from $0$ (an early spike to ${\sim}4$, settling ${\sim}1.6$) --- the over-optimisation arc.
 
 \textbf{Baseline patches} (as-shipped fixes; full diff: \code{tpu-2026\_our\_changes.patch} in repo).
 (1) \code{run\_tmux.sh} hard-coded a foreign home path; (2) the W\&B entity defaulted to a third party --- redirected to \code{a8-grpo};
 (3) \code{evaluate.py} built a fresh $B{=}0$ LoRA and never restored a checkpoint, so it could only score \emph{base} --- we added Orbax
-\code{--step}/\code{--ckpt-dir} LoRA restore; (4) TFDS's gsm8k builder crashes under protobuf 7.x once JAX imports, so we pre-materialise
-the seed-42 test split (\code{prepare\_test\_tfds.py}) and added an HF \code{datasets} fallback.
+\code{--step}/\code{--ckpt-dir} LoRA restore; (4) TFDS's gsm8k builder crashes under protobuf 7.x once JAX imports, so we evaluate on the identical GSM8K test
+via an HF \code{datasets} fallback (seed 42). (5) Raised checkpoint retention
+(\code{SAVE\_INTERVAL\_STEPS} $500{\to}100$, \code{MAX\_TO\_KEEP} $4{\to}40$) so the best-val checkpoint survives for selection --- a persistence change, not a training one.
 
 \section*{I.2\quad Understanding the baseline}
 \textbf{(a) Policies \& trainable parameters.} $\pi_\theta$ is the LoRA-adapted policy: frozen \code{gemma-3-1b-it} weights plus low-rank
@@ -85,14 +86,13 @@ $\mu{=}1$, $\pi_{\mathrm{old}}{=}\pi_\theta\Rightarrow\rho_t\equiv1$, so the cli
 $\operatorname{Var}(\hat g)=K^{-2}\sum_i(h_i-\bar h)(h_i-\bar h)^\top=O(1/K)$, with effective sample size $K_{\mathrm{eff}}\!\propto\!K$: a larger
 group directly lowers the variance of the gradient estimate $\hat g$. We therefore take \textbf{group size $G$} (the $K$ of I.2(b) and the theory) as the primary lever and run a controlled
 $\beta\times G$ \textbf{2$\times$2} (KL-penalty weight $\times$ group size) to separate it from the KL leash:
-R4$(G2,\beta0)$, R0$(G2,\beta.08$; baseline re-run$)$, R3b$(G8,\beta0)$, R5$(G8,\beta.08)$ --- plus single-axis controls R1$(\beta{=}0.3)$ and
+R4$(G2,\beta0)$, R0$(G2,\beta.08$; the baseline$)$, R3b$(G8,\beta0)$, R5$(G8,\beta.08)$ --- plus single-axis controls R1$(\beta{=}0.3)$ and
 R2$(+\text{soft length penalty})$, for \textbf{six full runs}. All share data (HF GSM8K, seed 42), eval, horizon (3364 steps) and a seed-matched
-rollout RNG (\code{PRNGKey(0)}); only the named knob changes per run. R0 re-runs the baseline config with \emph{dense} checkpoints, so its best-val
-$46.7\%$ recovers the peak that \code{bdbugenj}'s pruning hid behind I.1's $28.1\%$.
+rollout RNG (\code{PRNGKey(0)}); only the named knob changes per run.
 
 \begin{table}[t]
 \centering\small
-\caption{Held-out accuracy on the \emph{full} GSM8K test ($n{=}1319$; HF and TFDS differ only in seed-42 ordering, so at full $n$ the I.1$\to$I.3 source switch is immaterial), greedy/exact-match, $\pm$95\% bootstrap CI.
+\caption{Held-out accuracy on the \emph{full} GSM8K test ($n{=}1319$, HF split, seed 42), greedy/exact-match, $\pm$95\% bootstrap CI.
 Last column: \emph{paired} bootstrap $\Delta$ vs.\ base over the shared prompts (\code{paired\_ci.py}).
 $\ast$ = paired 95\% CI excludes 0; $\dagger$ = collapse. R1$(G2,\beta.3)$ and R2$(G2,+\text{len})$ fell \emph{below} base
 (R1 best 37.2 / final 0.0; R2 best 32.8 / final 40.6) --- clean negative results.}
@@ -102,7 +102,7 @@ $\ast$ = paired 95\% CI excludes 0; $\dagger$ = collapse. R1$(G2,\beta.3)$ and R
 Model & $(G,\beta)$, step & Acc.\,(\%) & 95\% CI & $\Delta$ base (paired) \\
 \midrule
 Base \code{gemma-3-1b-it} & --- & 47.4 & 44.7--50.0 & --- \\
-R0 (baseline re-run) & $(2,.08)$ best 700 & 46.7 & 44.0--49.4 & $-0.7$\ \,n.s. \\
+R0 (baseline) & $(2,.08)$ best 700 & 46.7 & 44.0--49.4 & $-0.7$\ \,n.s. \\
 R0 & $(2,.08)$ final 3364 & 6.2 & 4.9--7.5 & $-41.2^{\dagger}$ \\
 R4 & $(2,0)$ best 1300 & 52.8 & 50.1--55.5 & $+5.4^{\ast}$ \\
 R4 & $(2,0)$ final 3364 & 48.6 & 45.9--51.3 & $+1.2$\ \,n.s. \\
@@ -117,8 +117,7 @@ R5 & $(8,.08)$ final 3364 & 55.6 & 52.8--58.2 & $+8.2^{\ast}$ \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.86\linewidth]{F1_reward_kl.pdf}
-\caption{Mean training reward $\bar r$ (top) and $\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ (bottom) vs.\ GRPO step, baseline and all
-variants on shared axes. Baseline/R0/R1 over-optimise (reward peaks then collapses; KL spikes); the $G{=}8$ runs (R3b, R5) and R4 stay stable.}
+\caption{Mean training reward $\bar r$ (top) and $\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ (bottom) vs.\ GRPO step, for all six runs on shared axes. R0 over-optimises (reward peaks then declines) and R1 collapses (KL blow-up ${\sim}$step 1700); the $G{=}8$ runs (R3b, R5) and R4 stay stable.}
 \label{fig:rewardkl}
 \end{figure}
 
@@ -214,105 +213,146 @@ The negative dependence follows from the exact constraint
 if one centred reward increases, the others must collectively decrease.
 
 \paragraph{(iii)}
-For $i=j$,
+The full covariance matrix is
 \[
-\operatorname{Var}(r_i-\bar r)
+\boxed{
+\operatorname{Cov}(\hat g)
 =
-\sigma^2-\frac{\sigma^2}{K},
-\]
-and therefore
-\[
-\operatorname{Var}(X_i)
-=
-\left(1-\frac{1}{K}\right)h_i h_i^\top.
-\]
-Using all diagonal and cross-covariance terms,
-\begin{align*}
-\operatorname{Var}(\hat g)
-&=
-\frac{1}{K^2}
-\sum_{i,j=1}^K
-\operatorname{Cov}(X_i,X_j)\\
-&=
 \frac{1}{K^2}
 \left[
 \sum_{i=1}^K h_i h_i^\top
--\frac{1}{K}
+-
+\frac{1}{K}
 \left(\sum_{i=1}^K h_i\right)
 \left(\sum_{j=1}^K h_j\right)^\top
-\right].
-\end{align*}
-Equivalently,
-\[
-\boxed{
-\operatorname{Var}(\hat g)
+\right]
 =
 \frac{1}{K^2}
 \sum_{i=1}^K
-(h_i-\bar h)(h_i-\bar h)^\top.
+(h_i-\bar h)(h_i-\bar h)^\top .
 }
 \]
-By contrast, the mean of $K$ independent copies of $X_1$ would have covariance
+
+For the scalar variance convention used in the lectures, define
 \[
-\operatorname{Var}_{\mathrm{iid}}(\hat g)
+\operatorname{Var}_{\mathrm{tr}}(Z)
+:=
+\operatorname{tr}\!\left(\operatorname{Cov}(Z)\right).
+\]
+Taking the trace gives
+\[
+\boxed{
+\operatorname{Var}_{\mathrm{tr}}(\hat g)
 =
-\frac{1}{K}\operatorname{Var}(X_1)
+\frac{1}{K^2}
+\sum_{i=1}^K
+\|h_i-\bar h\|^2.
+}
+\]
+Also,
+\[
+\operatorname{Cov}(X_1)
 =
-\frac{1}{K}
-\left(1-\frac{1}{K}\right)h_1h_1^\top.
+\left(1-\frac{1}{K}\right)h_1h_1^\top,
+\]
+and hence
+\[
+\operatorname{Var}_{\mathrm{tr}}(X_1)
+=
+\left(1-\frac{1}{K}\right)\|h_1\|^2.
+\]
+If one instead averaged $K$ independent copies of $X_1$, the naive i.i.d.
+variance would be
+\[
+\operatorname{Var}_{\mathrm{tr,iid}}(\hat g)
+=
+\frac{1}{K}\operatorname{Var}_{\mathrm{tr}}(X_1).
 \]
 
-Since these are matrix-valued variances, there is no canonical scalar effective
-sample size. For a direction $u\in\mathbb{R}^d$ with
-$u^\top\operatorname{Var}(\hat g)u>0$, define
+Following the lecture convention, define the effective sample size by
 \[
-K_{\mathrm{eff}}(u)
+\operatorname{Var}_{\mathrm{tr}}(\hat g)
+=
+\frac{\operatorname{Var}_{\mathrm{tr}}(X_1)}
+{K_{\mathrm{eff}}}.
+\]
+Therefore
+\[
+\boxed{
+K_{\mathrm{eff}}
 =
 \frac{
-u^\top\operatorname{Var}(X_1)u
+\operatorname{Var}_{\mathrm{tr}}(X_1)
 }{
-u^\top\operatorname{Var}(\hat g)u
+\operatorname{Var}_{\mathrm{tr}}(\hat g)
+}
+=
+\frac{
+K^2\left(1-\frac{1}{K}\right)\|h_1\|^2
+}{
+\sum_{i=1}^K\|h_i-\bar h\|^2
+}
+=
+\frac{
+K(K-1)\|h_1\|^2
+}{
+\sum_{i=1}^K\|h_i-\bar h\|^2
 }.
+}
+\]
+Equivalently, its discrepancy from the nominal sample size $K$ is
+\[
+\frac{K_{\mathrm{eff}}}{K}
+=
+\frac{
+\operatorname{Var}_{\mathrm{tr,iid}}(\hat g)
+}{
+\operatorname{Var}_{\mathrm{tr}}(\hat g)
+}.
+\]
+
+If
+\[
+\frac{1}{K}\sum_{i=1}^K\|h_i-\bar h\|^2
+\]
+remains of constant order and $\|h_1\|^2=O(1)$, then
+\[
+K_{\mathrm{eff}}=\Theta(K)
+\]
+as $K\to\infty$.
+
+If all score vectors lie in one direction, write
+\[
+h_i=c_i v.
 \]
 Then
 \[
-\boxed{
-K_{\mathrm{eff}}(u)
-=
-\frac{
-K^2\left(1-\frac{1}{K}\right)(u^\top h_1)^2
-}{
-\sum_{i=1}^K
-\left(u^\top(h_i-\bar h)\right)^2
-}.
-}
-\]
-This definition gives $K_{\mathrm{eff}}(u)=K$ for the mean of $K$ genuinely
-independent copies of $X_1$.
-
-If the empirical directional dispersion
-\[
-\frac{1}{K}\sum_{i=1}^K
-\left(u^\top(h_i-\bar h)\right)^2
-\]
-converges to a positive constant, then $K_{\mathrm{eff}}(u)=\Theta(K)$.
-If all scores are collinear, $h_i=c_i v$, then
-\[
-\operatorname{Var}(\hat g)
+\operatorname{Cov}(\hat g)
 =
 \frac{vv^\top}{K^2}
-\sum_{i=1}^K(c_i-\bar c)^2.
+\sum_{i=1}^K(c_i-\bar c)^2,
 \]
-Thus only variation in the coefficients $c_i$ contributes. In particular, if
-all $h_i$ are identical, then
+so the covariance has rank at most one, and
+\[
+K_{\mathrm{eff}}
+=
+\frac{
+K(K-1)c_1^2
+}{
+\sum_{i=1}^K(c_i-\bar c)^2
+}.
+\]
+Thus only variation in the scalar coefficients $c_i$ contributes to the
+variance. In the special case $h_i=h$ for every $i$,
 \[
 \hat g
 =
-\frac{h_1}{K}\sum_{i=1}^K\hat A_i
+\frac{h}{K}\sum_{i=1}^K\hat A_i
 =0
 \]
-for every reward realisation, so $\operatorname{Var}(\hat g)=0$ and the
-directional effective sample size is formally infinite.
+for every reward realisation. Hence
+$\operatorname{Cov}(\hat g)=0$ and, provided $h\neq0$, the effective sample size
+is formally infinite.
 
 
 \subsection*{I.4.2 KL-regularised policy update}

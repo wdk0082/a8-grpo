@@ -2,6 +2,27 @@
 
 Running log of changes to the Part I report and supporting docs. Newest first.
 
+## 2026-06-20
+
+### I.4.1 Q1(iii) replaced with the user-supplied trace-based version
+- Swapped the Q1(iii) answer (effective sample size) in **both** `report/report_part1.tex` and `i4_theory_revised.tex` for the version the user supplied verbatim ("use exactly this"). Recompiled clean — still **9 pp**; I.1–I.3 untouched on pp.1–3; the new (iii) sits in I.4.1 on pp.4–5. No overfull boxes / missing chars.
+- **What changed vs the previous (directional) (iii)**: it now adopts the **lecture scalar-variance convention** $\operatorname{Var}_{\mathrm{tr}}(Z):=\operatorname{tr}(\operatorname{Cov}(Z))$, giving a single *scalar* $K_{\mathrm{eff}}=K(K-1)\lVert h_1\rVert^2/\sum_i\lVert h_i-\bar h\rVert^2$ in place of the per-direction $K_{\mathrm{eff}}(u)$. Retains the full matrix $\operatorname{Cov}(\hat g)=K^{-2}\sum_i(h_i-\bar h)(h_i-\bar h)^\top$, the iid sanity-check ($\operatorname{Var}_{\mathrm{tr,iid}}=\tfrac1K\operatorname{Var}_{\mathrm{tr}}(X_1)$), the $\Theta(K)$ growth result, the collinear $h_i=c_iv$ case, and the $h_i=h\Rightarrow K_{\mathrm{eff}}=\infty$ degenerate case.
+- This **reverses** the 2026-06-19 note below ("drops the redundant trace-based K_eff, keeps the directional one"): the user's newest version deliberately uses the trace/scalar form to match the lecture convention.
+- The `Let $\bar h=\dots$` opening at the top of I.4.1 is kept; the duplicate "Let $\bar h$" that led the pasted block was dropped to avoid repetition.
+
+## 2026-06-19 (later)
+
+### Self-contained `report/` folder
+- Moved `report_part1.{tex,pdf}` into **`report/`** and copied the 3 figures it uses (`F1_reward_kl.pdf`, `F4_2x2_GxB.pdf`, `S3_group_degeneracy.pdf`) in with their report names; dropped `\graphicspath{{figures/}}` so they resolve co-located. `report/` rebuilds standalone (`tectonic report_part1.tex`). The `report/` figures are snapshots of `figures/` — re-copy if the plots are regenerated.
+
+### Dropped the first-time baseline run (`bdbugenj`); I.1 now uses R0
+- Verified R0 satisfies **I.1(i–iii)** under the default config (β=0.08, G=2; confirmed from `launch_R0.sh` — no knob overrides). Rewrote I.1 around R0 (W&B `8c2785ut`, ~5 h 05 m, 3364 steps).
+- I.1(ii) reports **both** the `config.py`-default $n{=}64$ (base 45.3%, R0 42.2%→0.0%) and the full $n{=}1319$ for completeness (base 47.4%, R0 46.7%→6.2%), HF split / seed 42; **I.3 standardises on the full $n{=}1319$**. TFDS / the 51.6% number are dropped (they lived only in `bdbugenj`); R0 was evaluated on HF, so n=64 base is 45.3%.
+- Tidy-up: trimmed baseline-patch (4) to just the HF-fallback justification (dropped the unused `prepare_test_tfds.py` / TFDS-materialisation clause) and removed the now-stale Table 1 caption note about an "I.1→I.3 source switch" (both are HF now). Only one TFDS mention remains (patch 4).
+- Added baseline-patch (5): raised checkpoint retention (`SAVE_INTERVAL` 500→100, `MAX_TO_KEEP` 4→40) — persistence, not training; it's what lets us report best-val (the pruning problem `bdbugenj` had).
+- **Regenerated F1 without the `bdbugenj` line** (now R0–R5; peak-KL annotation auto-updated 41→≈33 = R1's max).
+- Removed the now-moot "baseline re-run" labels and the I.1↔I.3 28%-vs-47% reconciliation. `bdbugenj` no longer appears in the report. Clean build, 9 pp (I.1–I.3 on pp.1–3).
+
 ## 2026-06-19
 
 ### I.4 swapped to the revised version; report is now a single self-contained `.tex`
