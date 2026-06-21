@@ -2,6 +2,17 @@
 
 Running log of changes to the Part I report and supporting docs. Newest first.
 
+## 2026-06-21 (later 7)
+
+### Re-expanded I.4.3(iii-b) (the (later 6) trim went too far)
+- (iii-b) has no brevity constraint (unlike (v)), so restored substance per request. Added: (1) a **displayed** identity for why the outer weight alone is insufficient — $\E_m[w\,s_\theta(R-\mu_m)]=\E_p[s_\theta(R-\mu_p)]+(\mu_p-\mu_m)\E_p[s_\theta]$ — with the residual $(\mu_p-\mu_m)\E_p[s_\theta]$ vanishing only when $\E_p[s_\theta]=0$, i.e. exactly at $\theta=\theta_{\mathrm{old}}$ (score identity), not after an update step; (2) the self-normalised baseline now sits in a display **beside** the IS $\tfrac1K\sum w_jr_j$ (no longer inline prose). Replaced the terse one-line population-invariance parenthetical with this fuller math; kept the boxed reweighted advantage. Clean build, doc **9 → 10 pp**.
+- Follow-up (per request, since the question says "derive"): added the **unbiasedness derivation** of $\widehat\mu_p^{\mathrm{IS}}$ as one aligned display — $\E[\widehat\mu_p^{\mathrm{IS}}]=\E_m[wR]=\sum_a m_\alpha\tfrac{p}{m_\alpha}R=\sum_a pR=\mu_p$ (the weight undoing the change of measure) — and noted $\widehat\mu_p^{\mathrm{SN}}$ is consistent ($\E_m[w]=1$) but finite-$K$ biased. Still 10 pp.
+
+## 2026-06-21 (later 6)
+
+### Trimmed I.4.3(iii-b) to peer length
+- Q3(iii-b) is 2 marks but had grown to **6 boxed equations + a full score-identity derivation**. Cut to a peer-sized answer (~2 short paras + 1 display + 1 box, like (v-a)/(v-b)): the direct "No" with the sampling-distribution-vs-baseline reason; a **one-line** version of the population baseline-invariance remark ($\E_p[s_\theta]=0$ ⇒ harmless for the exact gradient; matters only finite-sample / $\sigma_r$-norm / clipping / multi-step — kept at the user's request); the IS baseline $\widehat\mu_p=\frac1K\sum w_jr_j$ (with its unbiasedness) and the SN variant inline (both kept); and the single boxed reweighted advantage $\widetilde A_i=w_i(r_i-\widehat\mu_p)/\widehat\sigma_p$. Removed the $A_m=A_p+(\mu_p-\mu_m)$ algebra, the boxed $(\mu_p-\mu_m)\E_p[s_\theta]$ identity, the full score-identity derivation, the separate $\widehat\sigma_p$ box, and the duplicate $\widehat g^{\mathrm{corr}}$ box. Clean build, doc **10 → 9 pp**.
+
 ## 2026-06-21 (later 5)
 
 ### Tightened I.4.3(iv)

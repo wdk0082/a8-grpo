@@ -668,138 +668,36 @@ Hence
 \]
 
 \paragraph{(iii-b)}
-Under mixture sampling,
+No. The importance weight $w_i$ re-targets the sampling distribution from $m_\alpha$ back to $p$, but the baseline is still the unweighted group mean $\bar r$, which under mixture sampling estimates $\mu_m=V^{\pi_{\mathrm{mix}}}(q)$, not $\mu_p=V^{\pi_{\mathrm{old}}}(q)$. Centring with this wrong baseline and applying only the outer weight gives
 \[
-    \bar r=\frac1K\sum_{j=1}^K r_j
-    \to
-    \mu_m=V^{\pi_{\mathrm{mix}}}(q),
+    \E_m\!\left[w\,s_\theta\,(R-\mu_m)\right]
+    =
+    \E_p\!\left[s_\theta\,(R-\mu_p)\right]
+    +(\mu_p-\mu_m)\,\E_p[s_\theta],
 \]
-not $\mu_p=V^{\pi_{\mathrm{old}}}(q)$. Therefore the unweighted group mean estimates the wrong baseline.
+whose first term is the target $\pi_{\mathrm{old}}$ gradient and where $\mu_p-\mu_m=\alpha(\mu_p-\mu_u)$. The residual $(\mu_p-\mu_m)\,\E_p[s_\theta]$ vanishes only when $\E_p[s_\theta]=0$, which the score identity gives exactly at $\theta=\theta_{\mathrm{old}}$ (where $p=\pi_\theta$) but not after any update step. So $w$ alone is enough only at $\theta=\theta_{\mathrm{old}}$; in general the baseline must be re-estimated under $p$.
 
-Define
+Using the same weights, the old-policy baseline can be estimated by
 \[
-    A_p(a):=R(q,a)-\mu_p,
-    \qquad
-    A_m(a):=R(q,a)-\mu_m.
+    \widehat\mu_p^{\mathrm{IS}}=\frac1K\sum_{j=1}^K w_jr_j
+    \qquad\text{or}\qquad
+    \widehat\mu_p^{\mathrm{SN}}=\frac{\sum_{j=1}^K w_jr_j}{\sum_{j=1}^K w_j}.
 \]
-Then
-\[
-    A_m(a)
-    =
-    A_p(a)+\mu_p-\mu_m,
-\]
-where
-\[
-    \mu_p-\mu_m
-    =
-    \alpha(\mu_p-\mu_u).
-\]
-Using only the outer importance weight gives
+The IS form is unbiased, since the weight undoes the change of sampling law:
 \[
 \begin{aligned}
-    \E_m[w(a)s_\theta(a)A_m(a)]
-    &=
-    \E_p[s_\theta(a)A_m(a)] \\
-    &=
-    \E_p[s_\theta(a)A_p(a)]
-    +
-    (\mu_p-\mu_m)\E_p[s_\theta(a)].
+    \E\!\left[\widehat\mu_p^{\mathrm{IS}}\right]
+    &=\E_m[wR]
+    =\sum_a m_\alpha(a)\,\frac{p(a)}{m_\alpha(a)}\,R(q,a)\\
+    &=\sum_a p(a)\,R(q,a)=\mu_p,
 \end{aligned}
 \]
-Thus
+while $\widehat\mu_p^{\mathrm{SN}}$ is consistent ($\E_m[w]=1$) but slightly biased at finite $K$. With the analogously weighted $\widehat\sigma_p$, the reweighted advantage that keeps $\widehat g_{\mathrm{mix}}$ unbiased for the $\pi_{\mathrm{old}}$ gradient is then
 \[
     \boxed{
-    \E_m[w s_\theta A_m]
-    -
-    \E_p[s_\theta A_p]
-    =
-    (\mu_p-\mu_m)\E_p[s_\theta].
-    }
-\]
-The importance weights correct the outer sampling distribution, but they do not make the unweighted statistic $\bar r$ estimate the old-policy value.
-
-At $\theta=\theta_{\mathrm{old}}$, one has the score-function identity
-\[
-    \E_p[s_{\theta_{\mathrm{old}}}(a)]
-    =
-    \sum_a p(a)\nabla_\theta\log p(a)
-    =
-    \sum_a \nabla_\theta p(a)
-    =
-    \nabla_\theta 1
-    =0.
-\]
-Therefore, for the exact unclipped policy gradient evaluated exactly at the old policy, any action-independent baseline gives the same population gradient. However, the baseline shift changes the empirical advantages and can matter under empirical normalization, PPO clipping, and multiple optimisation steps.
-
-Since
-\[
-    \mu_p
-    =
-    \E_m[w(a)R(q,a)],
-\]
-an unbiased raw importance-sampling estimator of the old-policy value is
-\[
-    \boxed{
-    \widehat\mu_p^{\mathrm{IS}}
-    =
-    \frac1K\sum_{j=1}^K w_j r_j.
-    }
-\]
-Indeed,
-\[
-    \E[\widehat\mu_p^{\mathrm{IS}}]
-    =
-    \E_m[wR]
-    =
-    \mu_p.
-\]
-
-A commonly used practical alternative is the self-normalized estimator
-\[
-    \boxed{
-    \widehat\mu_p^{\mathrm{SN}}
-    =
-    \frac{\sum_{j=1}^K w_jr_j}{\sum_{j=1}^K w_j}.
-    }
-\]
-This is consistent because
-\[
-    \E_m[w]=1,
-\]
-but it is generally slightly biased for finite $K$.
-
-A corresponding self-normalized weighted empirical variance is
-\[
-    \boxed{
-    \left(\widehat\sigma_p^{\mathrm{SN}}\right)^2
-    =
-    \frac{
-        \sum_{j=1}^K w_j(r_j-\widehat\mu_p^{\mathrm{SN}})^2
-    }{
-        \sum_{j=1}^K w_j
-    }.
-    }
-\]
-Thus a corrected estimator can be written as
-\[
-    \boxed{
-    \widehat g_{\mathrm{mix}}^{\mathrm{corr}}
-    =
-    \frac1K\sum_{i=1}^K
-    w_i s_\theta(a_i)
-    \frac{r_i-\widehat\mu_p}{\widehat\sigma_p}.
-    }
-\]
-Equivalently, absorb the importance weight into the advantage:
-\[
-    \boxed{
-    \widetilde A_i
-    =
-    w_i\frac{r_i-\widehat\mu_p}{\widehat\sigma_p},
+    \widetilde A_i=w_i\frac{r_i-\widehat\mu_p}{\widehat\sigma_p},
     \qquad
-    \widehat g_{\mathrm{mix}}^{\mathrm{corr}}
-    =
-    \frac1K\sum_{i=1}^K s_\theta(a_i)\widetilde A_i.
+    \widehat g_{\mathrm{mix}}=\frac1K\sum_{i=1}^K s_\theta(a_i)\,\widetilde A_i.
     }
 \]
 
