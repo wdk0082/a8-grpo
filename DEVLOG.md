@@ -2,7 +2,16 @@
 
 Running log of changes to the Part I report and supporting docs. Newest first.
 
+## 2026-06-21
+
+### I.4.2 Q1(iii) — dropped the inaccurate "joint distribution" wording
+- Per request, fixed only the KL-vs-clip contrast in I.4.2(iii) (both files). The KL constraint was called "a joint distribution-level constraint coupling all actions" / "the joint KL divergence" — but $\pi_\theta(\cdot\mid q)$ is a *single* distribution over the one action, not a joint distribution over several variables. Reworded to: a constraint on the **whole distribution** $\pi_\theta(\cdot\mid q)$ — a single distribution over the action, whose divergence $\sum_a\pi_\theta\log(\pi_\theta/\pi_{\mathrm{old}})$ depends on **all** actions' probabilities (incl. unsampled), versus clipping acting only on the **single sampled action**. Both "joint" occurrences removed.
+- Side effect: the cumulative I.4 expansions tip the doc **9 → 10 pp** (only the I.4.3 (v-b) tail spills onto p.10). I.1–I.3 untouched on pp.1–3, so the 3-page limit still holds; left as-is (not tightening unrequested parts).
+
 ## 2026-06-20
+
+### I.4.2 Q1(i) — explicit small-$\eta$ expansion
+- Per request, expanded only the small-$\eta$ step of I.4.2(i) (both files): added the intermediate algebra — first-order exponential expansion, the denominator $\to 1+\eta\,\mathbb{E}_{\pi_t}[A_t]+O(\eta^2)$, the $\tfrac{1}{1+x}=1-x+O(x^2)$ step, then multiply-out — leading to the (unchanged) result $\pi_{t+1}=\pi_t[1+\eta(A_t-\mathbb{E}_{\pi_t}[A_t])]+O(\eta^2)$. Rest of (i) and the closed-form softmax box untouched. Clean build, 9 pp.
 
 ### I.4.1 Q1(i) — explicit steps + conditioning convention
 - Per request, expanded only Q1(i) (both `report/report_part1.tex` and `i4_theory_revised.tex`): added the skipped intermediate steps for $\mathbb{E}[X_i]=h_i\mathbb{E}[\hat A_i]=0$ and $\mathbb{E}[\hat g]=\tfrac1K\sum\mathbb{E}[X_i]=0$, and made the explanation state the convention $\mathbb{E}[\,\cdot\,]\equiv\mathbb{E}[\,\cdot\mid a_1,\dots,a_K]$ (all expectations conditional on the fixed actions). The $\mathbb{E}[\hat A_i]$ line and (ii)/(iii) left untouched. Clean build, 9 pp.

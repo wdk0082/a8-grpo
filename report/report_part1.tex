@@ -409,7 +409,30 @@ Actions outside the support of $\pi_t$ remain assigned zero probability. The
 objective is strictly concave on this support, so the optimiser is unique,
 assuming the normalising constant is finite.
 
-For small $\eta$,
+For small $\eta$, expand each exponential as
+$\exp(\eta A_t(a))=1+\eta A_t(a)+O(\eta^2)$. The normalising denominator then
+becomes
+\[
+\sum_b\pi_t(b)\exp(\eta A_t(b))
+=
+\sum_b\pi_t(b)\bigl(1+\eta A_t(b)\bigr)+O(\eta^2)
+=
+1+\eta\,\mathbb{E}_{\pi_t}[A_t]+O(\eta^2),
+\]
+using $\sum_b\pi_t(b)=1$ and $\mathbb{E}_{\pi_t}[A_t]=\sum_b\pi_t(b)A_t(b)$.
+Applying $\frac{1}{1+x}=1-x+O(x^2)$ to this denominator,
+\[
+\pi_{t+1}(a)
+=
+\frac{\pi_t(a)\bigl(1+\eta A_t(a)\bigr)}
+{1+\eta\,\mathbb{E}_{\pi_t}[A_t]}
++O(\eta^2)
+=
+\pi_t(a)\bigl(1+\eta A_t(a)\bigr)
+\bigl(1-\eta\,\mathbb{E}_{\pi_t}[A_t]\bigr)
++O(\eta^2).
+\]
+Multiplying out and discarding the $O(\eta^2)$ cross term,
 \[
 \pi_{t+1}(a)
 =
@@ -500,9 +523,14 @@ constraint
 \bigr)
 \leq\delta
 \]
-is a joint distribution-level constraint coupling all actions. PPO clipping is
-samplewise and advantage-dependent, does not directly constrain unsampled
-actions, and does not guarantee that the joint KL divergence is small.
+is a constraint on the whole distribution $\pi_\theta(\cdot\mid q)$. Although this
+is a single distribution over the action, the divergence
+$\sum_a\pi_\theta(a\mid q)\log\frac{\pi_\theta(a\mid q)}{\pi_{\mathrm{old}}(a\mid q)}$
+depends on the probabilities of all actions simultaneously, including unsampled
+ones. PPO clipping, by contrast, acts only on the ratio at each individual
+sampled action and is advantage-dependent; it does not directly constrain
+unsampled actions, and does not guarantee that this distribution-level KL
+divergence is small.
 
 
 \subsection*{I.4.3 Mixture proposal and importance weighting}
