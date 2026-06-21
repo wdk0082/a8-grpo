@@ -2,6 +2,29 @@
 
 Running log of changes to the Part I report and supporting docs. Newest first.
 
+## 2026-06-21 (later 3)
+
+### Deleted `i4_theory_revised.tex`; simplified I.4.3(v) to the coursework's brevity
+- **Deleted `i4_theory_revised.tex`** (the standalone I.4 fragment) — no longer needed; `report/report_part1.tex` is now the single I.4 source, so future I.4 edits touch only the report.
+- **Simplified I.4.3(v)** to match the coursework's explicit brevity (Q3(v) a/b are 2 marks each, asking for behaviour + "one sentence" and "explain briefly" + "one concrete fix"). (v-a): now just the boxed $w_i=c^T\to0$ behaviour + the single sentence on why $c<1$ is typical when $\alpha>0$ (responses drawn from $\pi_{\mathrm{mix}}$ ⇒ sampled tokens have $\pi_{\mathrm{mix}}>\pi_{\mathrm{old}}$); cut the per-token $p_t<u_t$ analysis and the sequence-level KL-drift digression. (v-b): brief "why unreliable" (ESS collapses, variance explodes) + a *single* concrete fix ($\alpha_T=O(1/T)\Rightarrow w_i=c_T^T\to e^{-\kappa}>0$) + its trade-off (weaker exploration); dropped the second (clipping) fix since the question asks for one.
+- Removed the now-unused `\KL` preamble macro (its only use was the cut KL-drift line; `\E`/`\Var`/`\Cov` remain in use). Clean build; doc **12 → 11 pp** (the trim saved a page; I.1–I.3 untouched on pp.1–3).
+
+## 2026-06-21 (later 2)
+
+### I.4.3 replaced again — newer mixture-proposal solution (notation kept verbatim)
+- The user supplied a further-revised I.4.3 (`problem3_solution.tex`); replaced the previous I.4.3 in **both** `report/report_part1.tex` and `i4_theory_revised.tex`. Per request, **kept the author's notation as-is** (no macro expansion this time): added `\newcommand`s for `\E`/`\Var`/`\Cov`/`\KL` to the report preamble instead. Same structural fit as before (drop standalone preamble/`\title`/`\maketitle`; `\section*{(i) …}`/`\subsection*{(a) …}` → bare `\paragraph{(i)}`…`\paragraph{(v-b)}`; (iii)/(v) wrapper headers dropped). Title kept as "I.4.3 Mixture proposal and importance weighting".
+- **Repaired a copy corruption in the source**: a stray TAB had replaced the `\t` of `\to` on the (ii) line (`\widehat g_{\mathrm{mix}}<TAB>o`), which would have rendered as a stray "o"; restored to `\to` (now renders $\widehat g_{\mathrm{mix}}\to\widehat g_{\mathrm{GRPO}}$).
+- **vs the previous (2026-06-21 later) version**: this one *carries the $\sigma$ standardisation through* the practical estimator ($\widehat A_i=(r_i-\bar r)/\sigma_r$, $\widehat g^{\mathrm{corr}}$) rather than deferring it (resolves the earlier "defers σ" flag); (v-a) uses the sequence-level KL identity $\mathbb{E}_{\pi_{\mathrm{mix}}}[\log(\pi_{\mathrm{old}}/\pi_{\mathrm{mix}})]=-\operatorname{KL}(\pi_{\mathrm{mix}}\|\pi_{\mathrm{old}})\le0$; (v-b) adds the explicit weight-clipping alternative $\widetilde w_i=\min\{w_i,C\}$ with its bias note. The earlier I.4.3 entry below is fully superseded.
+- Removed `problem3_solution.tex` from the repo after integration (per request; a copy remains in `~/Downloads`). Clean build; doc now **12 pp** (I.4 on pp.4–12; I.1–I.3 untouched on pp.1–3).
+
+## 2026-06-21 (later)
+
+### I.4.3 replaced wholesale with the user's revised mixture-proposal solution
+- Replaced all of I.4.3 (intro + parts (i)–(v-b)) in **both** `report/report_part1.tex` and `i4_theory_revised.tex` with the user-supplied standalone solution (`~/Downloads/problem3_grpo_solution.tex`). Done programmatically (`/tmp/splice_i43.py`) — no hand-transcription of the math.
+- **Adaptations to fit the report** (content unchanged): dropped the standalone preamble/`\title`/`\maketitle`/`\end{document}`; remapped `\section*{(i) …}`/`\subsection*{(a) …}` → the report's bare `\paragraph{(i)}`…`\paragraph{(v-b)}` labels (dropping the "(iii)"/"(v)" wrapper headers, matching I.4.1/I.4.2 style); expanded the author's `\E`/`\Var`/`\Cov`/`\KL` macros to the report's spelled-out `\mathbb{E}`/`\operatorname{…}`. Kept the author's `\widehat`/`\widetilde` verbatim.
+- **What's new vs the previous I.4.3** (the revision is more thorough): (iii-b) cleanly separates population-unbiasedness (score identity $\mathbb{E}_p[s_\theta]=0$) from finite-sample, and gives the raw IS baseline $\hat\mu_p^{\mathrm{IS}}$ (unbiased), the self-normalised $\hat\mu_p^{\mathrm{SN}}$ + weighted variance, and the leave-one-out $\hat\mu_{p,-i}^{\mathrm{IS}}$ with an explicit unbiasedness proof; (v-a) adds the KL/Jensen drift argument ($\mathbb{E}_{m_t}[\log(p_t/m_t)]=-\operatorname{KL}(m_t\|p_t)\le0$, with the $\mathbb{E}_{m_t}[p_t/m_t]=1$ caveat) for why log-ratios drift negative; (v-b) swaps the old per-token log-ratio clamp for a length-dependent mixing schedule $\alpha_T=O(1/T)\Rightarrow(c_T)^T\to e^{-\kappa}>0$. Note: it defers the $\sigma$ standardisation explicitly (treats it as a variance-control heuristic) rather than carrying $\sigma_{r,w}$ through.
+- Clean build. Doc grows **10 → 11 pp** (I.4 now pp.4–11; I.1–I.3 untouched on pp.1–3, 3-page limit still holds).
+
 ## 2026-06-21
 
 ### I.4.2 Q1(iii) — dropped the inaccurate "joint distribution" wording
