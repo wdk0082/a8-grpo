@@ -802,29 +802,6 @@ Equivalently, absorb the importance weight into the advantage:
     \frac1K\sum_{i=1}^K s_\theta(a_i)\widetilde A_i.
     }
 \]
-Here $\widehat\mu_p$ may be either the raw estimator $\widehat\mu_p^{\mathrm{IS}}$ or the self-normalized estimator $\widehat\mu_p^{\mathrm{SN}}$. The raw estimator is unbiased for $\mu_p$; the self-normalized estimator is often more stable but is generally not exactly finite-sample unbiased.
-
-For an exactly unbiased finite-sample gradient without empirical standardization, one may use the leave-one-out baseline
-\[
-    \widehat\mu_{p,-i}^{\mathrm{IS}}
-    =
-    \frac1{K-1}\sum_{j\neq i}w_jr_j,
-\]
-giving
-\[
-    \boxed{
-    \widehat g_{\mathrm{LOO}}
-    =
-    \frac1K\sum_{i=1}^K
-    w_i s_\theta(a_i)
-    \left(r_i-\widehat\mu_{p,-i}^{\mathrm{IS}}\right).
-    }
-\]
-Because $\widehat\mu_{p,-i}^{\mathrm{IS}}$ is independent of $a_i$ and has expectation $\mu_p$, this is unbiased for
-\[
-    \E_p[s_\theta(a)(R(q,a)-\mu_p)].
-\]
-Empirical standardization by a random $\widehat\sigma_p$ is generally a variance-control heuristic rather than an exactly unbiased operation.
 
 \paragraph{(iv)}
 Let
@@ -892,47 +869,13 @@ Therefore, if large-magnitude advantages occur mainly on actions satisfying $u(a
 \[
     \E_p[(w-1)A_p^2]>0,
 \]
-and the variance increases. Intuitively, the mixture samples these old-policy-common actions less frequently and compensates with weights larger than one.
+and the variance increases.
 
 Conversely, if large-magnitude advantages occur mainly on actions satisfying $u(a)>p(a)$, then $w(a)<1$ where $A_p(a)^2$ is large, so
 \[
     \E_p[(w-1)A_p^2]<0,
 \]
-and the variance decreases. Intuitively, the uniform component oversamples old-policy-rare but high-magnitude-advantage responses, reducing their importance weights.
-
-A complementary calculation for the unweighted reward variability is the mixture-variance identity. Let
-\[
-    \sigma_p^2:=\Var_p(R),
-    \qquad
-    \sigma_u^2:=\Var_u(R).
-\]
-Then
-\[
-    \boxed{
-    \Var_{m_\alpha}(R)
-    =
-    (1-\alpha)\sigma_p^2
-    +
-    \alpha\sigma_u^2
-    +
-    \alpha(1-\alpha)(\mu_p-\mu_u)^2.
-    }
-\]
-Therefore
-\[
-    \Var_{m_\alpha}(R)-\sigma_p^2
-    =
-    \alpha\left[\sigma_u^2-\sigma_p^2+(1-\alpha)(\mu_p-\mu_u)^2\right].
-\]
-Thus the raw reward variance increases if
-\[
-    \sigma_u^2+(1-\alpha)(\mu_p-\mu_u)^2>\sigma_p^2,
-\]
-for example if the uniform policy has much larger reward variance. It decreases if
-\[
-    \sigma_u^2+(1-\alpha)(\mu_p-\mu_u)^2<\sigma_p^2,
-\]
-for example if $\mu_u=\mu_p$ and $\sigma_u^2<\sigma_p^2$.
+and the variance decreases.
 
 \paragraph{(v-a)}
 Since $0<c<1$ we have $\log c<0$, so

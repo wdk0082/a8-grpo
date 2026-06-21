@@ -2,6 +2,17 @@
 
 Running log of changes to the Part I report and supporting docs. Newest first.
 
+## 2026-06-21 (later 5)
+
+### Tightened I.4.3(iv)
+- Removed the "A complementary calculation … mixture-variance identity" block ($\operatorname{Var}_{m_\alpha}(R)=(1-\alpha)\sigma_p^2+\alpha\sigma_u^2+\alpha(1-\alpha)(\mu_p-\mu_u)^2$ and its increase/decrease conditions) — it describes the *raw reward* variance, not the *advantage-estimate* variance Q3(iv) actually asks about.
+- Removed the two "Intuitively, …" sentences: each explained why $w\gtrless1$ (already given by $w>1\iff u<p$), not why the *variance* moves (which $\mathbb{E}_p[(w-1)A_p^2]\gtrless0$ already establishes), so they were redundant/misleading. (iv) now = boxed Cov difference + scalar version + the two conditions on $R$ with their sign arguments — exactly what's asked. Clean build, doc **11 → 10 pp**.
+
+## 2026-06-21 (later 4)
+
+### Trimmed I.4.3(iii-b)
+- Q3(iii-b) is 2 marks ("derive the reweighted advantage"). Kept the **IS** and **SN** baseline/variance estimators ($\widehat\mu_p^{\mathrm{IS}}$, $\widehat\mu_p^{\mathrm{SN}}$, $(\widehat\sigma_p^{\mathrm{SN}})^2$), the corrected estimator $\widehat g_{\mathrm{mix}}^{\mathrm{corr}}$, and the absorbed-advantage reformulation $\widetilde A_i=w_i(r_i-\widehat\mu_p)/\widehat\sigma_p$ (the answer). Removed everything after it: the "$\widehat\mu_p$ may be either…" remark, the leave-one-out unbiased construction ($\widehat\mu_{p,-i}^{\mathrm{IS}}$, $\widehat g_{\mathrm{LOO}}$), and the trailing $\widehat\sigma_p$-heuristic caveat (~970 chars). Clean build, still 11 pp.
+
 ## 2026-06-21 (later 3)
 
 ### Deleted `i4_theory_revised.tex`; simplified I.4.3(v) to the coursework's brevity
