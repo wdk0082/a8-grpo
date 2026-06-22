@@ -43,6 +43,13 @@ COLORS = {"baseline": "0.45", "R0": "black", "R1": "tab:blue",
           "R2": "tab:green", "R3": "tab:orange", "R3b": "tab:purple", "R4": "tab:red",
           "R5": "tab:brown"}
 
+PARAMS = {"R0": "G=2, β=.08", "R1": "G=2, β=.3", "R2": "G=2, +len",
+          "R4": "G=2, β=0", "R3b": "G=8, β=0", "R5": "G=8, β=.08"}
+
+
+def label_for(name):
+    return f"{name} ({PARAMS[name]})" if name in PARAMS else name
+
 
 def color_for(name, i):
     return COLORS.get(name, f"C{i % 10}")
@@ -84,11 +91,11 @@ def f1(runs, outdir):
         x, y = series(df, T_REWARD)
         if len(x):
             a1.plot(x, y, color=c, alpha=.16, lw=.8)
-            a1.plot(x, ema(y), color=c, lw=1.7, label=n)
+            a1.plot(x, ema(y), color=c, lw=1.7, label=label_for(n))
         xk, yk = series(df, T_KL)
         if len(xk):
             a2.plot(xk, yk, color=c, alpha=.16, lw=.8)
-            a2.plot(xk, ema(yk), color=c, lw=1.7, label=n)
+            a2.plot(xk, ema(yk), color=c, lw=1.7, label=label_for(n))
             allkl.append(yk)
     a1.set_ylabel(r"mean reward $\bar r$")
     a1.grid(alpha=.3)
@@ -210,13 +217,13 @@ def s3(runs, outdir):
     for n, df in runs.items():
         xd, yd = series(df, "diag/train/degenerate_frac")
         if len(xd):
-            ax.plot(xd, ema(yd), color="tab:red", lw=1.8, label=f"{n} degenerate-frac")
+            ax.plot(xd, ema(yd), color="tab:red", lw=1.8, label="degenerate frac")
             drew = True
         for tag, lab, ls in [("diag/train/reward_std_mean", "σ_r", "--"),
                              ("diag/train/adv_std", "adv std", ":")]:
             x, y = series(df, tag)
             if len(x):
-                ax2.plot(x, ema(y), color="0.35", lw=1.3, ls=ls, label=f"{n} {lab}")
+                ax2.plot(x, ema(y), color="0.35", lw=1.3, ls=ls, label=lab)
     if not drew:
         plt.close(fig)
         print("  S3 skipped (no diag/* tags — only instrumented runs)")
@@ -225,11 +232,11 @@ def s3(runs, outdir):
     ax.set_ylabel("degenerate-group fraction", color="tab:red")
     ax.set_ylim(-0.02, 1.05)
     ax2.set_ylabel("within-group σ_r / adv std (dashed)")
-    ax.set_title("Group degeneracy at G=8 (R3b): ~37% degenerate (steady), σ_r ~1.5")
     ax.grid(alpha=.3)
     h1, l1 = ax.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
-    ax.legend(h1 + h2, l1 + l2, fontsize=7, loc="center right")
+    ax.legend(h1 + h2, l1 + l2, fontsize=8, loc="lower center",
+              bbox_to_anchor=(0.5, 1.0), ncol=3, frameon=False)
     save(fig, outdir, "S3_group_degeneracy")
 
 
