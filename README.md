@@ -12,12 +12,14 @@ corner (R0, R1). Write-up: **`i3_results.md`**; figures **`figures/F4_2x2_GxB.pd
 ## Layout
 | Path | What |
 |---|---|
-| `i1_results.md` · `i3_results.md` · `i3_runs_plan.md` · `i4_theory.tex` | write-ups (I.1 baseline · I.3 study · plan · I.4 theory) |
+| `report/` | **the deliverable** — `report_part1.pdf` (Parts I.1–I.4) + its self-contained LaTeX source and figures |
+| `i3_results.md` · `i3_runs_plan.md` | write-ups: the I.3 controlled study (results + diagnosis) · the I.2–I.3 runs/metrics plan |
+| `analysis/` | analysis tooling, **run from the repo root**: `plot_report.py` (figures) · `paired_ci.py` (paired bootstrap CIs) · `export_wandb.py` (W&B→CSV) |
+| `training_logs/` | per-run W&B scalar exports `tb_scalars_*.csv` (source for the training-curve figures) |
 | `figures/` | report figures F1–F4, S1–S3 (PNG+PDF) + `F2_accuracy_table.tex` |
 | `evals/` | per-checkpoint eval dumps (per-example correctness + bootstrap CI) — n=64 and n=1319 |
-| `tb_scalars_*.csv` | per-run W&B scalar exports (source for the training-curve figures) |
-| `plot_report.py` · `paired_ci.py` · `export_wandb.py` | figures · paired bootstrap CIs · W&B→CSV |
-| `tpu-2026/` | training code (see *Upstream / our contribution* below) |
+| `scripts/` | VM orchestration: `run_sweep_n1319.sh` (full-n eval sweep) · `pull_all_ckpts.sh` (checkpoint-archive pull) |
+| `tpu-2026/` · `tpu-2026_our_changes.patch` | training code + our changes as one diff (see *Upstream / our contribution* below) |
 | `vm_snapshot/` | archive pulled off the TPU VM before deletion: patched code, per-run `launch_*.sh`, full `train.log`s |
 | `ckpts_archive/MANIFEST.md` | manifest of the 210 LoRA checkpoints — **the checkpoints themselves are local-only, not in git** (46 GB) |
 

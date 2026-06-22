@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Export a W&B run's full history to long-format CSV [tag, step, value].
 
-Output matches tb_scalars_full.csv so the CSV drops straight into plot_report.py.
+Output matches the training_logs/tb_scalars_<run>.csv format so the CSV drops straight into analysis/plot_report.py.
 Uses scan_history() (every logged step, no sampling). Stdlib csv only (no pandas),
 so it runs anywhere wandb is installed + authed (e.g. the TPU VM, which already is).
 
 Run on the VM (authed) then scp the CSV down, or locally after `pip install wandb`:
-  python export_wandb.py 8c2785ut tb_scalars_R0.csv
-  python export_wandb.py <run_id> [out.csv] [--entity E --project P]
+  python analysis/export_wandb.py 8c2785ut training_logs/tb_scalars_R0.csv
+  python analysis/export_wandb.py <run_id> [out.csv] [--entity E --project P]
 """
 import argparse
 import csv

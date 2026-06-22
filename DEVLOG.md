@@ -2,6 +2,16 @@
 
 Running log of changes to the Part I report and supporting docs. Newest first.
 
+## 2026-06-22
+
+### Repo cleanup + reorganisation (branch `cleanup/repo-structure`)
+- **Verified (Q2):** all our training-code changes live in `tpu-2026/` — exactly 5 modified files (`config/data/evaluate/rewards/train.py`) + 1 new (`prepare_test_tfds.py`), confirmed by diffing against a fresh upstream `borisbolliet/tpu-2026@77c5a67` clone — and `tpu-2026_our_changes.patch` captures them all (its blob hashes match the current files). The root analysis tooling is separate, original work, not a change to the reference code.
+- **New folders:** `training_logs/` (the `tb_scalars_*.csv` exports) · `analysis/` (`plot_report.py`, `paired_ci.py`, `export_wandb.py` — run from the repo root) · `scripts/` (`run_sweep_n1319.sh`, `pull_all_ckpts.sh`).
+- **Deleted (recoverable from `main`):** stale I.1 artifacts `i1_results.md` + `i1_{diagnostics,eval_accuracy,reward_kl}.png`; superseded `i4_theory.tex` (the report is the single I.4 source), `tb_scalars_partial.csv` (→ `full`), `pull_ckpts.sh` (→ `pull_all`); five ephemeral pollers `watch_{sweep,r1r2,r5,r5final,r5redo}.sh`.
+- **Left untouched:** `report/ figures/ evals/ ckpts_archive/ vm_snapshot/`, the `*.tgz` archives (gitignored), and `tpu-2026/`.
+- **Reference fixes:** rewrote the README layout table (now lists `report/` as the deliverable, the new folders, and drops the deleted files); repointed `analysis/plot_report.py` + `analysis/export_wandb.py` docstrings/defaults at `training_logs/`; updated the `analysis/…` tool paths in `i3_results.md`.
+- **Follow-up:** deleted `tb_scalars_full.csv` too — it was the W&B export of the *dropped* `bdbugenj` baseline (KL peak 41.0, 45 tags; the run I.1 was first written around, before R0 superseded it), **not** one of R0–R5 and unused by any current figure (F1 was regenerated as R0–R5). Repointed `plot_report.py`'s no-arg default `{baseline: …full.csv}` → `{R0: training_logs/tb_scalars_R0.csv}`. `training_logs/` now holds exactly R0–R5.
+
 ## 2026-06-21 (later 7)
 
 ### Re-expanded I.4.3(iii-b) (the (later 6) trim went too far)

@@ -2,8 +2,7 @@
 """Generate the Part I.1-I.3 report figures from exported scalar CSVs + eval JSONs.
 
 Scalar CSV  = long format [tag, step, value], one file per run
-              (baseline = tb_scalars_full.csv; variants = tb_scalars_<run>.csv,
-              produced by export_wandb.py).
+              (training_logs/tb_scalars_<run>.csv, produced by export_wandb.py).
 Eval JSON   = evaluate.py --dump output (per-example correctness + bootstrap CI).
 
 Figures -> ./figures/ as PNG + PDF (PDF for \\includegraphics in the LaTeX report):
@@ -14,9 +13,10 @@ Figures -> ./figures/ as PNG + PDF (PDF for \\includegraphics in the LaTeX repor
   S2  completion length + entropy proxy vs step            [I.3(c)]           SUPP
 
 Examples:
-  ~/ENTER/bin/python plot_report.py                          # baseline-only
-  python plot_report.py --runs baseline=tb_scalars_full.csv R0=tb_scalars_R0.csv R1=tb_scalars_R1.csv
-  python plot_report.py --runs ... --evals Base=eval_BASE.json "R0@best=eval_R0_best.json"
+  # run from the repo root:
+  ~/ENTER/bin/python analysis/plot_report.py                 # R0 only (default)
+  python analysis/plot_report.py --runs R0=training_logs/tb_scalars_R0.csv R1=training_logs/tb_scalars_R1.csv R3b=training_logs/tb_scalars_R3b.csv
+  python analysis/plot_report.py --runs ... --evals Base=evals/eval_BASE.json "R0@best=evals/eval_R0_best.json"
 """
 import argparse
 import json
@@ -328,7 +328,7 @@ def main():
     ap.add_argument("--outdir", default="figures")
     ap.add_argument("--eval-suffix", default="", help="suffix on eval JSON filenames (e.g. _n1319)")
     a = ap.parse_args()
-    spec = parse_kv(a.runs) or {"baseline": "tb_scalars_full.csv"}
+    spec = parse_kv(a.runs) or {"R0": "training_logs/tb_scalars_R0.csv"}
     runs = {}
     for n, p in spec.items():
         if os.path.exists(p):

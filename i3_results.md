@@ -102,6 +102,6 @@ Last logged training completion per run — **same prompt** (answer = 15), 1 sam
 ## Artifacts
 - `figures/` — F1/F2/F3/S1/S2/S3 + **F4** (β×G 2×2) (PNG+PDF) + `F2_accuracy_table.tex`
 - `evals/` — n=64 + **n=1319** `--dump` JSONs (base + R0/R4/R3b/R5 × best/final; R1/R2 pending), per-example + CI
-- `paired_ci.py` (paired bootstrap over shared prompts) · `plot_report.py` (CSV+evals→figures, `--eval-suffix _n1319`) · `export_wandb.py`
+- `analysis/paired_ci.py` (paired bootstrap over shared prompts) · `analysis/plot_report.py` (CSV+evals→figures, `--eval-suffix _n1319`) · `analysis/export_wandb.py`
 - `ckpts_archive/` — all 210 checkpoints (46 GB) + `MANIFEST.md`; `vm_snapshot/` — code + per-run launch scripts + logs
 - W&B: R0 `8c2785ut`, R1 `9p3kota8`, R2 `xt3d5b0e`, R4 `082vyug5`, R3b `sgjawrsw`, R5 `qu0uammy` (project `a8-grpo`)
