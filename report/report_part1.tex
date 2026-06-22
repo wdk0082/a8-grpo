@@ -103,7 +103,7 @@ R3b$(G{=}8,\beta{=}0)$, R5$(G{=}8,\beta{=}.08)$ --- plus a $\beta$-axis extensio
 
 \begin{table}[t]
 \centering\small
-\caption{Held-out accuracy on the \emph{full} GSM8K test ($n{=}1319$, HF split, seed 42), greedy/exact-match, $\pm$95\% bootstrap CI; each run trained for the full \textbf{3364} GRPO steps (one epoch), scored at its best-val and final checkpoints.
+\caption{Held-out accuracy on the \emph{full} GSM8K test ($n{=}1319$, HF split, seed 42), greedy/exact-match, $\pm$95\% bootstrap CI; each run trained for the full \textbf{3364} GRPO steps (one epoch), scored at its \emph{best-val} (the saved checkpoint nearest the peak held-out validation \emph{reward}) and \emph{final} (step 3364) checkpoints.
 Last column: \emph{paired} bootstrap $\Delta$ vs.\ base over the shared prompts (\code{paired\_ci.py}).
 $\ast$ = paired 95\% CI excludes 0; $\dagger$ = collapse. The $\beta$-axis extension R1$(G{=}2,\beta{=}.3)$ fell \emph{below} base
 (best 37.2 / final 0.0) --- a clean negative result.
