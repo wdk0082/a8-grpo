@@ -186,7 +186,7 @@ h_i\,\mathbb{E}[\hat A_i]
 h_i\cdot 0
 =0,
 \qquad
-\boxed{\mathbb{E}[X_i]=0}.
+\mathbb{E}[X_i]=0.
 \]
 Summing over the group and again using linearity,
 \[
@@ -199,7 +199,7 @@ Summing over the group and again using linearity,
 \frac{1}{K}\sum_{i=1}^K 0
 =0,
 \qquad
-\boxed{\mathbb{E}[\hat g]=0}.
+\mathbb{E}[\hat g]=0.
 \]
 Every expectation in this question is taken conditional on the sampled
 responses $a_1,\dots,a_K$, which are held fixed; that is, $\mathbb{E}[\,\cdot\,]$
@@ -229,12 +229,10 @@ For $i\neq j$,
 \end{align*}
 Hence
 \[
-\boxed{
 \operatorname{Cov}(X_i,X_j)
 =
 -\frac{1}{K}h_i h_j^\top,
 \qquad i\neq j.
-}
 \]
 More precisely, the scalar covariance of the centred rewards is negative; the
 cross-covariance matrix is a negative scalar multiple of $h_i h_j^\top$.
@@ -247,7 +245,6 @@ if one centred reward increases, the others must collectively decrease.
 \paragraph{(iii)}
 The full covariance matrix is
 \[
-\boxed{
 \operatorname{Cov}(\hat g)
 =
 \frac{1}{K^2}
@@ -262,7 +259,6 @@ The full covariance matrix is
 \frac{1}{K^2}
 \sum_{i=1}^K
 (h_i-\bar h)(h_i-\bar h)^\top .
-}
 \]
 
 For the scalar variance convention used in the lectures, define
@@ -273,13 +269,11 @@ For the scalar variance convention used in the lectures, define
 \]
 Taking the trace gives
 \[
-\boxed{
 \operatorname{Var}_{\mathrm{tr}}(\hat g)
 =
 \frac{1}{K^2}
 \sum_{i=1}^K
 \|h_i-\bar h\|^2.
-}
 \]
 Also,
 \[
@@ -310,7 +304,6 @@ Following the lecture convention, define the effective sample size by
 \]
 Therefore
 \[
-\boxed{
 K_{\mathrm{eff}}
 =
 \frac{
@@ -330,7 +323,6 @@ K(K-1)\|h_1\|^2
 }{
 \sum_{i=1}^K\|h_i-\bar h\|^2
 }.
-}
 \]
 Equivalently, its discrepancy from the nominal sample size $K$ is
 \[
@@ -410,55 +402,26 @@ A_t(a)
 \]
 Consequently,
 \[
-\boxed{
 \pi_{t+1}(a)
 =
 \frac{\pi_t(a)\exp(\eta A_t(a))}
-{\sum_b\pi_t(b)\exp(\eta A_t(b))}
-}.
+{\sum_b\pi_t(b)\exp(\eta A_t(b))}.
 \]
 Actions outside the support of $\pi_t$ remain assigned zero probability. The
 objective is strictly concave on this support, so the optimiser is unique,
 assuming the normalising constant is finite.
 
-For small $\eta$, expand each exponential as
-$\exp(\eta A_t(a))=1+\eta A_t(a)+O(\eta^2)$. The normalising denominator then
-becomes
-\[
-\sum_b\pi_t(b)\exp(\eta A_t(b))
-=
-\sum_b\pi_t(b)\bigl(1+\eta A_t(b)\bigr)+O(\eta^2)
-=
-1+\eta\,\mathbb{E}_{\pi_t}[A_t]+O(\eta^2),
-\]
-using $\sum_b\pi_t(b)=1$ and $\mathbb{E}_{\pi_t}[A_t]=\sum_b\pi_t(b)A_t(b)$.
-Applying $\frac{1}{1+x}=1-x+O(x^2)$ to this denominator,
-\[
-\pi_{t+1}(a)
-=
-\frac{\pi_t(a)\bigl(1+\eta A_t(a)\bigr)}
-{1+\eta\,\mathbb{E}_{\pi_t}[A_t]}
-+O(\eta^2)
-=
-\pi_t(a)\bigl(1+\eta A_t(a)\bigr)
-\bigl(1-\eta\,\mathbb{E}_{\pi_t}[A_t]\bigr)
-+O(\eta^2).
-\]
-Multiplying out and discarding the $O(\eta^2)$ cross term,
+For small $\eta$, expanding $\exp(\eta A_t)=1+\eta A_t+O(\eta^2)$ in both the numerator and the denominator and keeping first order,
 \[
 \pi_{t+1}(a)
 =
 \pi_t(a)
 \left[
-1+\eta
-\left(
-A_t(a)-\mathbb{E}_{\pi_t}[A_t]
-\right)
+1+\eta\left(A_t(a)-\mathbb{E}_{\pi_t}[A_t]\right)
 \right]
 +O(\eta^2),
 \]
-so $\eta$ controls the update size. Large $\eta$ places increasingly more mass
-on high-advantage actions.
+so $\eta$ controls the update size: large $\eta$ places increasingly more mass on high-advantage actions.
 
 \paragraph{(ii)}
 For the true advantage of $\pi_t$,
@@ -478,7 +441,6 @@ J(\pi_{t+1})
 \]
 It follows that
 \[
-\boxed{
 J(\pi_{t+1})
 \geq
 \frac{1}{\eta}
@@ -486,7 +448,6 @@ J(\pi_{t+1})
 \geq 0
 =
 J(\pi_t).
-}
 \]
 Thus the update guarantees monotone improvement in the scalar performance
 measure defined in the question.
@@ -563,61 +524,15 @@ and
 Assume $m_\alpha(a)>0$ whenever $p(a)>0$.
 
 \paragraph{(i)}
-For any integrable function $F$,
+The true policy gradient is an expectation under $p=\pi_{\mathrm{old}}$. Importance sampling rewrites any such expectation as one
+under $m_\alpha=\pi_{\mathrm{mix}}$, namely $\E_{a\sim p}[F]=\E_{a\sim m_\alpha}[w(a)\,F]$ with weight $w(a)=p(a)/m_\alpha(a)$;
+drawing $a_i\overset{\mathrm{iid}}{\sim}\pi_{\mathrm{mix}}$ therefore gives the estimator and its explicit weight
 \[
-    \E_{a\sim p}[F(a)]
-    =
-    \E_{a\sim m_\alpha}
-    \left[
-        \frac{p(a)}{m_\alpha(a)}F(a)
-    \right].
-\]
-Define the importance weight
-\[
-    w(a):=\frac{p(a)}{m_\alpha(a)}.
-\]
-For a sample $a_i\sim m_\alpha$, this gives
-\[
-    w_i:=w(a_i)
-    =
-    \frac{\pi_{\mathrm{old}}(a_i\mid q)}
-    {(1-\alpha)\pi_{\mathrm{old}}(a_i\mid q)
-    +\alpha\pi_{\mathrm{unif}}(a_i\mid q)}.
-\]
-Equivalently, when $p(a_i)>0$,
-\[
-    w_i
-    =
-    \left[
-        (1-\alpha)
-        +
-        \alpha
-        \frac{\pi_{\mathrm{unif}}(a_i\mid q)}
-        {\pi_{\mathrm{old}}(a_i\mid q)}
-    \right]^{-1}.
-\]
-Thus an importance-corrected estimator has the form
-\[
-    \boxed{
-    \widehat g_{\mathrm{mix}}
-    =
-    \frac1K\sum_{i=1}^K
-    w_i\,s_\theta(a_i)\,\widehat A_i,
+    \widehat g_{\mathrm{mix}}=\frac1K\sum_{i=1}^K w_i\,s_\theta(a_i)\,\widehat A_i,
     \qquad
-    a_i\overset{\mathrm{iid}}{\sim}\pi_{\mathrm{mix}}.
-    }
+    w_i=\frac{\pi_{\mathrm{old}}(a_i\mid q)}{(1-\alpha)\,\pi_{\mathrm{old}}(a_i\mid q)+\alpha\,\pi_{\mathrm{unif}}(a_i\mid q)}.
 \]
-Indeed, for a fixed advantage function $A$,
-\[
-\begin{aligned}
-    \E_{m_\alpha}\left[w(a)s_\theta(a)A(a)\right]
-    &=
-    \sum_a m_\alpha(a)\frac{p(a)}{m_\alpha(a)}s_\theta(a)A(a) \\
-    &=
-    \E_p\left[s_\theta(a)A(a)\right].
-\end{aligned}
-\]
-The importance weight corrects the sampling distribution from $m_\alpha$ back to $p$. The correct empirical advantage is discussed in part (iii).
+The weight corrects the sampling distribution from $m_\alpha$ back to $p$; the correct empirical advantage $\widehat A_i$ is addressed in (iii).
 
 \paragraph{(ii)}
 For every fixed realised action $a_i$,
@@ -638,9 +553,7 @@ With the standard GRPO empirical advantage
 \]
 we obtain
 \[
-    \boxed{
     \widehat g_{\mathrm{mix}}\to \widehat g_{\mathrm{GRPO}}.
-    }
 \]
 The same statement holds if a weighted mean and weighted standard deviation are used, since $w_i\to1$ implies that the weighted empirical statistics converge to the ordinary ones for the same realised actions.
 
@@ -667,13 +580,11 @@ Then, by linearity of expectation,
 \]
 Hence
 \[
-    \boxed{
     V^{\pi_{\mathrm{mix}}}(q)
     =
     (1-\alpha)V^{\pi_{\mathrm{old}}}(q)
     +
     \alpha V^{\pi_{\mathrm{unif}}}(q).
-    }
 \]
 
 \paragraph{(iii-b)}
@@ -703,11 +614,9 @@ The IS form is unbiased, since the weight undoes the change of sampling law:
 \]
 while $\widehat\mu_p^{\mathrm{SN}}$ is consistent ($\E_m[w]=1$) but slightly biased at finite $K$. With the analogously weighted $\widehat\sigma_p$, the reweighted advantage that keeps $\widehat g_{\mathrm{mix}}$ unbiased for the $\pi_{\mathrm{old}}$ gradient is then
 \[
-    \boxed{
     \widetilde A_i=w_i\frac{r_i-\widehat\mu_p}{\widehat\sigma_p},
     \qquad
     \widehat g_{\mathrm{mix}}=\frac1K\sum_{i=1}^K s_\theta(a_i)\,\widetilde A_i.
-    }
 \]
 
 \paragraph{(iv)}
@@ -737,23 +646,19 @@ The importance-sampled estimator has covariance
 \]
 Therefore
 \[
-    \boxed{
     \Cov(\widehat g_{\mathrm{mix}})
     -
     \Cov(\widehat g_{\mathrm{GRPO}})
     =
     \frac1K\E_p[(w-1)ZZ^\top].
-    }
 \]
 There is no universal ordering: importance sampling can either increase or decrease variance.
 
 For the scalar advantage contribution alone,
 \[
-    \boxed{
     \Var_m(wA_p)-\Var_p(A_p)
     =
     \E_p[(w-1)A_p^2].
-    }
 \]
 For $\alpha>0$,
 \[
@@ -787,7 +692,7 @@ and the variance decreases.
 \paragraph{(v-a)}
 Since $0<c<1$ we have $\log c<0$, so
 \[
-    \boxed{\,w_i=c^T=e^{T\log c}\longrightarrow 0\ \text{ exponentially fast as }T\to\infty.\,}
+    \,w_i=c^T=e^{T\log c}\longrightarrow 0\ \text{ exponentially fast as }T\to\infty.\,
 \]
 A value $c<1$ is the typical situation when $\alpha>0$ because the responses are drawn from $\pi_{\mathrm{mix}}$, whose uniform component inflates the probability of tokens that are unlikely under $\pi_{\mathrm{old}}$, so the sampled tokens usually satisfy $\pi_{\mathrm{mix}}>\pi_{\mathrm{old}}$, i.e.\ $c=\pi_{\mathrm{old}}/\pi_{\mathrm{mix}}<1$.
 
