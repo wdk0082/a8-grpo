@@ -69,18 +69,18 @@
 \section*{I.1\quad Reproducing the baseline}
 \textbf{(i) The run.} We reproduce the baseline as run \textbf{R0} (\wb{8c2785ut}): upstream commit
 \href{https://github.com/borisbolliet/tpu-2026}{\texttt{borisbolliet/tpu-2026@77c5a67}} with the \code{config.py} defaults
-($\beta{=}0.08$, $G{=}2$), full \textbf{3364} GRPO steps (one epoch), \textbf{$\sim$5\,h\,05\,m} wall-clock on \code{v6e-1}.
+(KL-penalty weight $\beta{=}0.08$; group size $K{=}2$, the responses sampled per prompt), full \textbf{3364} GRPO steps (one epoch), \textbf{$\sim$5\,h\,05\,m} wall-clock on \code{v6e-1}.
 
 \textbf{(ii) Accuracy.} Held-out GSM8K \emph{test}, HF split, fixed seed 42, greedy/exact-match, reported as \emph{($n{=}64$\,/\,$n{=}1319$)} where
 $n{=}64$ is the \code{config.py} default and $n{=}1319$ is the full test: base \textbf{45.3\,/\,47.4\%}; the LoRA-finetuned checkpoint scores
 \textbf{42.2\,/\,46.7\%} at best-val (step 700) and \textbf{0.0\,/\,6.2\%} at the final step 3364 (per-checkpoint CIs in Table~\ref{tab:acc}).
 
 \textbf{(iii) Training curves.} Fig.~\ref{fig:rewardkl} (R0, black): mean reward $\bar r$ rises, peaks $\approx$\,step 1000, then declines;
-$\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ climbs from $0$ (an early spike to ${\sim}4$, settling ${\sim}1.6$).
+$\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ (finetuned policy vs.\ frozen base) climbs from $0$ (an early spike to ${\sim}4$, settling ${\sim}1.6$).
 
 \textbf{Baseline patches} (fixes for what did not run as-shipped; full diff in \code{tpu-2026\_our\_changes.patch}).
 (1) the W\&B entity defaulted to a third party --- redirected to our \code{a8-grpo} project;
-(2) \code{evaluate.py} built a fresh $B{=}0$ LoRA and never restored a checkpoint, so it could only score \emph{base} --- we added Orbax
+(2) \code{evaluate.py} built a fresh LoRA still at initialisation ($B{=}0$, so the adapter $\Delta W{=}0$) and never restored a checkpoint, so it could only score \emph{base} --- we added Orbax
 \code{--step}/\code{--ckpt-dir} LoRA restore;
 (3) TFDS's gsm8k builder crashes under protobuf 7.x once JAX imports, so we evaluate the identical GSM8K test via an HF \code{datasets} fallback (seed 42);
 (4) raised checkpoint retention (\code{SAVE\_INTERVAL\_STEPS} $500{\to}100$, \code{MAX\_TO\_KEEP} $4{\to}40$) so the best-val checkpoint survives selection (persistence, not training).
@@ -118,24 +118,24 @@ clipping at all; the clip (and $\epsilon$) would bind only once $\mu>1$.
 \section*{I.3\quad Improving on the baseline}
 \textbf{Modification \& motivation.}
 
-\emph{(i) Why R0 fails.} R0 over-optimises at the smallest group size $K{=}2$: the lecture group-mean estimator $\hat g=\tfrac1K\sum_i h_i\hat A_i$
+\emph{(i) Why R0 fails.} R0 over-optimises at the smallest group size $K{=}2$: the lecture group-mean estimator $\hat g=\tfrac1K\sum_i h_i\hat A_i$ ($h_i$ the per-sample score $\nabla_\theta\log\pi_\theta(a_i)$)
 has gradient variance
 \[
   \operatorname{Var}(\hat g)=\tfrac1{K^2}\textstyle\sum_{i}(h_i-\bar h)(h_i-\bar h)^\top=O(1/K),
 \]
 maximal at $K{=}2$, so the noisy updates let the policy chase the dense \emph{shaping} reward (reward-hacking the format) while true correctness decays.
 
-\emph{(ii) Predictions from this theory.} (1) raising the group size $G$ shrinks $\operatorname{Var}(\hat g)\propto1/K$, predicting smoother updates and
+\emph{(ii) Predictions from this theory.} (1) raising the group size $K$ shrinks $\operatorname{Var}(\hat g)\propto1/K$, predicting smoother updates and
 milder over-optimisation; (2) the reference-KL penalty pulls the update toward $\pi_{\mathrm{ref}}$ --- the penalised optimum is
 $\pi^\star(a)\propto\pi_{\mathrm{ref}}(a)\,e^{\hat A(a)/\beta}\!\to\!\pi_{\mathrm{ref}}$ as $\beta$ grows --- so a \emph{tighter} leash (larger $\beta$)
-should curb the drift. We test both with a controlled $\beta\times G$ \textbf{2$\times$2} --- R4$(G{=}2,\beta{=}0)$, R0$(G{=}2,\beta{=}.08$; baseline$)$,
-R3b$(G{=}8,\beta{=}0)$, R5$(G{=}8,\beta{=}.08)$ --- plus a $\beta$-axis extension R1$(G{=}2,\beta{=}.3)$, for \textbf{five full runs} sharing data
+should curb the drift. We test both with a controlled $\beta\times K$ \textbf{2$\times$2} --- R4$(K{=}2,\beta{=}0)$, R0$(K{=}2,\beta{=}.08$; baseline$)$,
+R3b$(K{=}8,\beta{=}0)$, R5$(K{=}8,\beta{=}.08)$ --- plus a $\beta$-axis extension R1$(K{=}2,\beta{=}.3)$, for \textbf{five full runs} sharing data
 (HF GSM8K, seed 42), eval, horizon (3364 steps) and rollout RNG (\code{PRNGKey(0)}); only the named knob changes.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.58\linewidth]{F1_reward_kl.pdf}
-\caption{Mean training reward $\bar r$ (top) and $\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ (bottom) vs.\ GRPO step, for all five runs on shared axes. R0 over-optimises (reward peaks then declines) and R1 collapses (KL blow-up ${\sim}$step 1700); the $G{=}8$ runs (R3b, R5) and R4 stay stable.}
+\caption{Mean training reward $\bar r$ (top) and $\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ (bottom) vs.\ GRPO step, for all five runs on shared axes. R0 over-optimises (reward peaks then declines) and R1 collapses (KL blow-up ${\sim}$step 1700); the $K{=}8$ runs (R3b, R5) and R4 stay stable.}
 \label{fig:rewardkl}
 \end{figure}
 
@@ -143,13 +143,13 @@ R3b$(G{=}8,\beta{=}0)$, R5$(G{=}8,\beta{=}.08)$ --- plus a $\beta$-axis extensio
 \centering\small
 \caption{Held-out accuracy on the \emph{full} GSM8K test ($n{=}1319$, HF split, seed 42), greedy/exact-match, $\pm$95\% bootstrap CI; each run trained for the full \textbf{3364} GRPO steps (one epoch), scored at its \emph{best-val} (the saved checkpoint nearest the peak held-out validation \emph{reward}) and \emph{final} (step 3364) checkpoints.
 Last column: \emph{paired} bootstrap $\Delta$ vs.\ base over the shared prompts (\code{paired\_ci.py}).
-$\ast$ = paired 95\% CI excludes 0; $\dagger$ = collapse. The $\beta$-axis extension R1$(G{=}2,\beta{=}.3)$ fell \emph{below} base
+$\ast$ = paired 95\% CI excludes 0; $\dagger$ = collapse. The $\beta$-axis extension R1$(K{=}2,\beta{=}.3)$ fell \emph{below} base
 (best 37.2 / final 0.0) --- a clean negative result.
 All five runs are logged to the W\&B project \href{https://wandb.ai/sichengma0514-university-of-cambridge/a8-grpo}{\texttt{a8-grpo}}.}
 \label{tab:acc}
 \begin{tabular}{llrrr}
 \toprule
-Model & $(G,\beta)$, step & Acc.\,(\%) & 95\% CI & $\Delta$ base (paired) \\
+Model & $(K,\beta)$, step & Acc.\,(\%) & 95\% CI & $\Delta$ base (paired) \\
 \midrule
 Base \code{gemma-3-1b-it} & --- & 47.4 & 44.7--50.0 & --- \\
 R0 (baseline) & $(2,.08)$ best 700 & 46.7 & 44.0--49.4 & $-0.7$\ \,n.s. \\
@@ -169,25 +169,25 @@ $\pm$95\% bootstrap and paired-$\Delta$ CIs over the shared prompts.
 
 \textbf{(b) Training curves} (Fig.~\ref{fig:rewardkl}): mean reward and KL for the five runs on shared axes.
 
-\textbf{(c) Diagnostic} (Fig.~\ref{fig:diag}): group degeneracy at $G{=}8$ --- about a third of groups are all-$K$-equal (zero advantage) yet
+\textbf{(c) Diagnostic} (Fig.~\ref{fig:diag}): group degeneracy at $K{=}8$ --- about a third of groups are all-$K$-equal (zero advantage) yet
 within-group $\sigma_r$ holds $\approx1.5$, not $\to0$.
 
 \begin{figure}[H]
 \centering
-\begin{subfigure}{0.60\linewidth}\centering\includegraphics[width=\linewidth]{F4_2x2_GxB.pdf}\caption{$\beta\times G$ 2$\times$2 (best/final acc).}\label{fig:2x2}\end{subfigure}\hfill
-\begin{subfigure}{0.60\linewidth}\centering\includegraphics[width=\linewidth]{S3_group_degeneracy.pdf}\caption{Group degeneracy at $G{=}8$.}\label{fig:diag}\end{subfigure}
-\caption{\emph{Left:} accuracy by $(G,\beta)$ --- collapse occurs \emph{only} at $G{=}2,\beta{>}0$ (R0). \emph{Right:} the diagnostic --- at $G{=}8$ about a
+\begin{subfigure}{0.60\linewidth}\centering\includegraphics[width=\linewidth]{F4_2x2_GxB.pdf}\caption{$\beta\times K$ 2$\times$2 (best/final acc).}\label{fig:2x2}\end{subfigure}\hfill
+\begin{subfigure}{0.60\linewidth}\centering\includegraphics[width=\linewidth]{S3_group_degeneracy.pdf}\caption{Group degeneracy at $K{=}8$.}\label{fig:diag}\end{subfigure}
+\caption{\emph{Left:} accuracy by $(K,\beta)$ --- collapse occurs \emph{only} at $K{=}2,\beta{>}0$ (R0). \emph{Right:} the diagnostic --- at $K{=}8$ about a
 third of groups are degenerate (all-$K$ rewards equal) yet $\sigma_r$ holds $\approx1.5$ (steady, not $\to0$).}
 \end{figure}
 
-\textbf{(d) Findings vs.\ prediction.} \emph{Prediction (1) holds.} $G{=}8$ is the winning intervention: \textbf{R3b ($G{=}8,\beta{=}0$) is the best
-model at 57.2\%} ($+9.9$\,pp over base, paired CI excludes 0); both $G{=}8$ runs beat base and each beats its matched $G{=}2$ run, and the 2$\times$2
-(Fig.~\ref{fig:2x2}) shows over-optimisation is a $G{=}2$ phenomenon --- $G{=}2$ peaks then degrades (R4 $52.8\!\to\!48.6$; R0 collapses) while $G{=}8$
+\textbf{(d) Findings vs.\ prediction.} \emph{Prediction (1) holds.} $K{=}8$ is the winning intervention: \textbf{R3b ($K{=}8,\beta{=}0$) is the best
+model at 57.2\%} ($+9.9$\,pp over base, paired CI excludes 0); both $K{=}8$ runs beat base and each beats its matched $K{=}2$ run, and the 2$\times$2
+(Fig.~\ref{fig:2x2}) shows over-optimisation is a $K{=}2$ phenomenon --- $K{=}2$ peaks then degrades (R4 $52.8\!\to\!48.6$; R0 collapses) while $K{=}8$
 improves monotonically to the final step --- exactly as the lower $\operatorname{Var}(\hat g)$ predicts. \emph{Prediction (2) is contradicted.} The
-tighter KL leash did not help: at $G{=}2$, $\beta{=}0$ (R4) beats $\beta{=}0.08$ (R0, which collapses) and pushing to $\beta{=}0.3$ (R1) collapsed
-\emph{faster} (final 0\%); the collapse is confined to the $G{=}2,\beta{>}0$ corner, and at $G{=}8$ the KL weight is statistically irrelevant
+tighter KL leash did not help: at $K{=}2$, $\beta{=}0$ (R4) beats $\beta{=}0.08$ (R0, which collapses) and pushing to $\beta{=}0.3$ (R1) collapsed
+\emph{faster} (final 0\%); the collapse is confined to the $K{=}2,\beta{>}0$ corner, and at $K{=}8$ the KL weight is statistically irrelevant
 (R3b vs.\ R5: $+1.7$\,pp, n.s.). The cure was variance reduction (group size), not regularisation --- echoing \axv{2503.14476}{DAPO}'s removal of the KL term for
-long-output RL. The cost of $G{=}8$ is group degeneracy (Fig.~\ref{fig:diag}, the dead-group / effective-sample-size issue), but the net effect is
+long-output RL. The cost of $K{=}8$ is group degeneracy (Fig.~\ref{fig:diag}, the dead-group / effective-sample-size issue), but the net effect is
 still $+8$--$10$\,pp.
 
 \clearpage
@@ -195,7 +195,7 @@ still $+8$--$10$\,pp.
 
 \subsection*{I.4.1 Group-mean normalisation}
 
-Let
+Let $r_1,\dots,r_K$ be the group's i.i.d.\ rewards with mean $\mu$ and variance $\sigma^2$, $h_i$ the per-sample score, and $\hat A_i$ the std-normalised advantage; write
 \[
 \bar h=\frac{1}{K}\sum_{i=1}^K h_i.
 \]
@@ -413,7 +413,7 @@ is formally infinite.
 \subsection*{I.4.2 KL-regularised policy update}
 
 \paragraph{(i)}
-The objective is
+With step size $\eta>0$ (the inverse weight on the KL proximal term), the objective is
 \[
 F(\pi)
 =
@@ -552,7 +552,7 @@ and
 \[
     s_\theta(a):=\nabla_\theta \log \pi_\theta(a\mid q).
 \]
-Assume $m_\alpha(a)>0$ whenever $p(a)>0$.
+Here $\alpha\in(0,1)$ is the mixing weight (the fraction of uniform exploration $u$ blended into $p$). Assume $m_\alpha(a)>0$ whenever $p(a)>0$.
 
 \paragraph{(i)}
 The true policy gradient is an expectation under $p=\pi_{\mathrm{old}}$. Importance sampling rewrites any such expectation as one
