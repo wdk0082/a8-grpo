@@ -71,18 +71,24 @@ with the adapters disabled --- used as the fixed reference for the KL penalty; s
 group-mean, std-normalised advantage $\hat A_i{=}(r_i-\bar r)/\sigma_r$ with $\bar r,\sigma_r$ over all $K$ samples \emph{including} $i$ --- \emph{not}
 leave-one-out.
 
-\textbf{(c) Shaping vs.\ correctness rewards.} Shaping: \code{match\_format\_exactly} and \code{match\_format\_approximately} (reward the
-\code{<reasoning>}/\code{<answer>} template). True correctness: \code{check\_answer} and \code{check\_numbers} (extracted number vs.\ gold).
-\textcolor{red}{With the correctness reward \emph{alone}, an early policy is almost never numerically right, so every sample in a group scores
-$\approx 0$: within-group $\sigma_r\!\to\!0$ and $\hat A_i{=}(r_i-\bar r)/\sigma_r$ has no signal (an $\varepsilon$ in the denominator averts a literal
-$0/0$) --- degenerate groups, no gradient. The shaping terms give differently-formatted samples different rewards, restoring $\sigma_r>0$ and a
-usable advantage that bootstraps learning.}
+\textbf{(c) Shaping vs.\ correctness rewards.} Shaping: \code{match\_format\_exactly}, \code{match\_format\_approximately} (the
+\code{<reasoning>}/\code{<answer>} template). Correctness: \code{check\_answer} (gold match, only if the full template parses) and its looser fallback \code{check\_numbers} (any number
+after \code{<answer>}). With correctness \emph{alone} $\sigma_r$ vanishes on most groups --- not because the policy is rarely right (base scores $47\%$,
+Table~\ref{tab:acc}) but because the reward is \emph{coarse}: at $K{=}2$ the two siblings usually \emph{tie}, splitting only when exactly one is
+parseable-and-correct. A tie gives $r_i{-}\bar r{=}0$ over $\sigma_r{+}10^{-6}$ (Tunix, \code{algo\_core.py}), so $\hat A_i{=}0$ \emph{exactly}: no signal,
+not an unstable $0/0$; early learning is slow. The dense shaping
+terms keep $\sigma_r{>}0$ while giving gradient signal toward parseable outputs (the precondition for correctness to vary), so the exact-match
+reward can actually take effect in later training steps.
 
-\textbf{(d) Clipped surrogate \& $\epsilon$.} The PPO-style clip lives in Tunix's \code{GRPOLearner} (module \code{tunix.rl}), in its clipped policy-gradient loss: it forms a
-\textbf{per-token} ratio $\rho_t{=}\pi_\theta(a_t)/\pi_{\mathrm{old}}(a_t)$ and optimises $\min\!\big(\rho_t\hat A,\ \mathrm{clip}(\rho_t,1{-}\epsilon,1{+}\epsilon)\hat A\big)$.
-The clip range $\epsilon$ is set by \code{EPSILON}$=0.2$ in \code{scripts/config.py}. \textcolor{red}{Two deviations from the lecture form: (i) the ratio
-is \textbf{per-token}, not per-sequence; (ii) at $\mu{=}1$, $\pi_{\mathrm{old}}{=}\pi_\theta\Rightarrow\rho_t\equiv1$, so the clip is \textbf{dormant} in
-the baseline (it engages only for $\mu>1$).}
+\textbf{(d) Clipped surrogate \& $\epsilon$.} The PPO-style clip lives in Tunix's \code{GRPOLearner} (module \code{tunix.rl}); the clip range is
+$\epsilon{=}$\code{EPSILON}$=0.2$ in \code{scripts/config.py}. Two deviations from the lecture form. \emph{(i) Token- vs sequence-level:} the
+lectures clip a \textbf{per-response} ratio $\rho_i{=}\pi_\theta(a_i\mid q)/\pi_{\mathrm{old}}(a_i\mid q)$ (whole-sequence likelihood, one clip
+per response); Tunix clips a \textbf{per-token} ratio $\rho_{i,t}{=}\pi_\theta(a_{i,t}\mid q,a_{i,<t})/\pi_{\mathrm{old}}(a_{i,t}\mid q,a_{i,<t})$
+token-by-token (a token-level objective, as in DAPO). \emph{(ii) The clip is inert in this baseline:} with $\mu{=}$\code{NUM\_ITERATIONS}$=1$
+there is one gradient step per rollout batch, so $\pi_{\mathrm{old}}{=}\pi_\theta$, every $\rho\equiv1$, and nothing is ever clipped --- the
+surrogate collapses to the plain (unclipped) policy gradient and $\epsilon$ is irrelevant. This is not a \emph{contradiction} (the lecture form
+also reduces to this at $\mu{=}1$), but a non-trivial hyperparameter-induced consequence: the baseline's ``clipped'' objective performs no
+clipping at all; the clip (and $\epsilon$) would bind only once $\mu>1$.
 
 \section*{I.3\quad Improving on the baseline}
 \textbf{Modification \& motivation.}
