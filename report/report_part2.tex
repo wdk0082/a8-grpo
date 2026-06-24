@@ -32,38 +32,39 @@ Studied in full at commit \href{https://github.com/borisbolliet/cmbagent_lg/tree
 
 \begin{figure}[h]
 \centering
-\scalebox{0.84}{%
 \begin{tikzpicture}[
-  >={Stealth[length=2mm,width=1.5mm]}, font=\footnotesize,
-  proc/.style={rectangle, rounded corners=2pt, draw=blue!55, fill=blue!6, align=center,
-               inner sep=3pt, minimum height=7mm, text width=33mm},
-  rt/.style={rectangle, rounded corners=2pt, draw=orange!80!black, fill=orange!14, align=center,
-             inner sep=3pt, minimum height=7mm, text width=33mm},
-  term/.style={rounded rectangle, draw=black!55, fill=black!8, align=center, inner sep=3pt},
+  >={Stealth[length=2.6mm,width=2mm]}, font=\small,
+  proc/.style={rectangle, rounded corners=2.5pt, draw=blue!55, fill=blue!7, align=center,
+               inner xsep=9pt, inner ysep=6pt},
+  rt/.style={rectangle, rounded corners=2.5pt, draw=orange!80!black, fill=orange!15, align=center,
+             inner xsep=9pt, inner ysep=6pt},
+  term/.style={rounded rectangle, draw=black!55, fill=black!8, align=center, inner sep=4pt, font=\footnotesize\bfseries},
   e/.style={->, semithick, draw=black!72},
-  lbl/.style={font=\scriptsize, inner sep=1.5pt},
+  lbl/.style={font=\footnotesize, inner sep=2.5pt, fill=white},
 ]
 \node[term] (start) at (0,0) {START};
-\node[proc] (exec)   at (0,-1.5) {\code{execute\_step}\\[-1pt]{\scriptsize $=$ \code{deep\_research.run\_step}}};
-\node[proc] (rev)    at (0,-3.0) {\code{adaptive\_review}\\[-1pt]{\scriptsize critic LLM $\Rightarrow$ \code{AdaptiveReview}}};
-\node[rt]   (r1)     at (0,-4.5) {\code{route\_after\_review}};
-\node[proc] (replan) at (0,-6.0) {\code{replan\_tail}\\[-1pt]{\scriptsize planner LLM $\Rightarrow$ new tail}};
-\node[proc] (merge)  at (0,-7.4) {\code{merge\_plan}\\[-1pt]{\scriptsize prefix $+$ new tail}};
-\node[rt]   (r2)     at (0,-8.9) {\code{route\_after\_merge}};
-\node[term] (end)    at (5.0,-4.5) {END};
+\node[proc] (exec)   at (0,-1.7) {\code{execute\_step} {\footnotesize($=$\,\code{deep\_research.run\_step})}};
+\node[proc] (rev)    at (0,-3.4) {\code{adaptive\_review} {\footnotesize(critic LLM $\Rightarrow$ \code{AdaptiveReview})}};
+\node[rt]   (r1)     at (0,-5.1) {\code{route\_after\_review}};
+\node[proc] (replan) at (0,-6.8) {\code{replan\_tail} {\footnotesize(planner LLM $\Rightarrow$ new tail)}};
+\node[proc] (merge)  at (0,-8.3) {\code{merge\_plan} {\footnotesize(prefix $+$ new tail)}};
+\node[rt]   (r2)     at (0,-9.8) {\code{route\_after\_merge}};
+\node[term] (end)    at (8.4,-5.1) {END};
 
 \draw[e] (start) -- (exec);
-\draw[e] (exec)  -- (rev)  node[lbl,midway,right]{$+$summary, $+$outcome; \code{step\_index}{+}{+}};
+\draw[e] (exec)  -- (rev)  node[lbl,midway,right]{$+$summary, $+$outcome;\ \ \code{step\_index}{+}{+}};
 \draw[e] (rev)   -- (r1);
 \draw[e] (r1)    -- (replan) node[lbl,midway,right]{\code{needs\_adaptation}};
 \draw[e] (replan)-- (merge);
 \draw[e] (merge) -- (r2);
-\draw[e] (r1.east) -- (end) node[lbl,midway,above,align=center]{step not \code{fulfilled},\\[-1pt] or plan exhausted};
-\draw[e] (r2.east) -| (end) node[lbl,pos=0.18,below]{plan exhausted};
+\draw[e] (r1.east) -- (end.west) node[lbl,midway,above,align=center]{step not \code{fulfilled},\\ or plan exhausted};
+\draw[e] (r2.east) -| (end) node[lbl,pos=0.13,below]{plan exhausted};
 % back-edges to execute_step (next step)
-\draw[e] (r1.west) -- ++(-1.7,0) |- (exec.west) node[lbl,pos=0.25,left,align=center]{advance:\\[-1pt] no adaptation};
-\draw[e] (r2.west) -- ++(-3.0,0) |- ([yshift=-1.6mm]exec.west) node[lbl,pos=0.18,left]{steps remain};
-\end{tikzpicture}}
+\draw[e] (r1.west) -- ++(-2.7,0) |- (exec.west);
+\draw[e] (r2.west) -- ++(-4.3,0) |- ([yshift=-2.4mm]exec.west);
+\node[lbl,align=center] at (-3.45,-4.6) {advance:\\ no adaptation};
+\node[lbl] at (-3.45,-9.45) {steps remain};
+\end{tikzpicture}
 \caption{Adaptive-planning LangGraph graph (\code{adaptive\_planning/graph.py}). Blue $=$ work nodes, orange $=$ conditional
 routers; the threaded \code{AdaptivePlanState} carries \code{plan}, \code{step\_index}, \code{step\_summaries}/\code{step\_outcomes},
 \code{adaptive\_review}, \code{new\_tail}, \code{adaptive\_history}. \emph{(Excluded from the 2-page limit.)}}
@@ -73,28 +74,35 @@ routers; the threaded \code{AdaptivePlanState} carries \code{plan}, \code{step\_
 executes it. \code{execute\_step} (\code{deep\_research}'s \code{run\_step}, reused verbatim) runs the step at \code{step\_index},
 appends a summary and a structured outcome \{\code{fulfilled},\dots\}, increments \code{step\_index}, and always passes to
 \code{adaptive\_review}.
-\emph{Trigger:} \code{adaptive\_review} --- a critic LLM given the overall task, the step's summary$+$outcome, and the unrun steps ---
-returns \code{AdaptiveReview(needs\_adaptation, recommendations)}; \code{route\_after\_review} goes to \code{replan\_tail} \emph{iff}
-the step was \code{fulfilled}, the plan is not exhausted, \emph{and} \code{needs\_adaptation} --- otherwise it advances or halts at
-\code{END}.
-\emph{Mutable vs.\ fixed:} only the \emph{tail} \code{plan.sub\_tasks[n\_done:]} changes --- \code{replan\_tail} gets a replacement
-tail from the planner LLM (given the completed summaries, current tail, and recommendations) and \code{merge\_plan} sets
-\code{plan = completed\_prefix + new\_tail}. The completed prefix, its summaries/outcomes, and \code{step\_index} are frozen, so
-executed work is never re-run.
-\emph{Termination:} a router returns \code{END} when a step is \emph{not} \code{fulfilled} or \code{step\_index $>$ len(plan)}.
-\code{execute\_step} advances \code{step\_index} by one per step and revision never does, so the loop ends only once the replanner
-returns a consumable tail --- a \emph{soft} guarantee: it is merely \emph{prompted} to ``keep the tail minimal'', with no revision
-counter or length cap, so a non-shrinking replanner is stopped only by LangGraph's default \code{recursion\_limit} (which
-\emph{raises} rather than finishing), unlike the initial loop's hard \code{num\_rounds} bound.
+\textbf{What triggers a revision.} \code{adaptive\_review} --- a critic LLM given the overall task, the latest step's
+summary$+$outcome, and the unrun steps --- returns \code{AdaptiveReview(needs\_adaptation, recommendations)}.
+\code{route\_after\_review} branches to \code{replan\_tail} \emph{iff} the step was \code{fulfilled}, the plan is not exhausted,
+\emph{and} \code{needs\_adaptation} is set; otherwise it advances to the next step or halts at \code{END}.
+
+\textbf{What may change.} Only the \emph{tail} \code{plan.sub\_tasks[n\_done:]}: \code{replan\_tail} asks the planner LLM (given the
+completed summaries, the current tail, and the recommendations) for a replacement tail, and \code{merge\_plan} sets
+\code{plan = completed\_prefix + new\_tail}.
+
+\textbf{What is held fixed.} The completed prefix \code{plan.sub\_tasks[:n\_done]}, its stored summaries/outcomes, and
+\code{step\_index} are never touched by a revision, so executed work is neither re-run nor re-ordered.
+
+\textbf{How it terminates.} A router returns \code{END} as soon as a step is \emph{not} \code{fulfilled} or the plan is exhausted
+(\code{step\_index $>$ len(plan)}); \code{execute\_step} advances \code{step\_index} by one per step while a revision never does, so
+the plan is consumed only by execution and the loop halts once the replanner stops extending the tail. The sole hard backstop is
+LangGraph's default \code{recursion\_limit}, which \emph{raises} rather than finishing --- whether this is a genuine guarantee is
+taken up in II.2.
 
 \section*{II.2\quad Problems}
 
-\textbf{P1 --- No designed termination or progress guarantee.} \code{step\_index} increases only in \code{execute\_step};
-\code{replan\_tail} may return a tail \emph{longer} than the steps it replaces, and \code{merge\_plan} routes straight back into
-execution. There is no revision budget, no plan-length cap, and no monotone quantity that must strictly decrease. Closed-loop
-control is only well-behaved when the feedback law contracts toward the goal (a termination/Lyapunov argument); a free-text
-``keep it minimal'' instruction to an LLM is not such a contraction, and can thrash or diverge. The only hard backstop,
-\code{recursion\_limit}, surfaces as an \emph{exception}, not a finished run --- and the safeguard the initial planner relies on
+\textbf{P1 --- Termination is not \emph{guaranteed}.} The graph \emph{does} have a stopping rule --- \code{route\_after\_review}
+and \code{route\_after\_merge} return \code{END} the moment a step is not \code{fulfilled} or the plan is exhausted
+(\code{step\_index $>$ len(plan)}), so a well-behaved run does terminate. The defect is that nothing \emph{forces} that rule to be
+reached: \code{step\_index} advances only in \code{execute\_step}, whereas \code{replan\_tail} may return a tail \emph{longer} than
+the steps it replaces and \code{merge\_plan} routes straight back into execution. With no revision budget, no length cap and no
+monotone quantity that must strictly decrease, the plan can grow without bound and the ``exhausted'' condition recede forever.
+Closed-loop control is well-behaved only when the feedback law contracts toward the goal (a Lyapunov/termination argument), and a
+free-text ``keep the tail minimal'' instruction to an LLM is no such contraction. The only hard backstop, \code{recursion\_limit},
+surfaces as an \emph{exception}, not a finished run --- and the bounded-loop safeguard the initial planner relies on
 (\code{num\_rounds}) was dropped here.
 
 \textbf{P2 --- Adaptation is disabled exactly when it is most needed.} \code{route\_after\_review} returns \code{END} the instant an
