@@ -73,24 +73,23 @@ routers; the threaded \code{AdaptivePlanState} carries \code{plan}, \code{step\_
 \noindent\textbf{Walkthrough.} The initial \code{Plan} comes from the bounded propose--critique loop in \code{planning/}; this graph
 executes it. \code{execute\_step} (\code{deep\_research}'s \code{run\_step}, reused verbatim) runs the step at \code{step\_index},
 appends a summary and a structured outcome \{\code{fulfilled},\dots\}, increments \code{step\_index}, and always passes to
-\code{adaptive\_review}.
-\textbf{What triggers a revision.} \code{adaptive\_review} --- a critic LLM given the overall task, the latest step's
+\code{adaptive\_review}. The four things the brief asks for:
+\begin{itemize}[leftmargin=2.2em,label={},topsep=3pt,itemsep=4pt]
+\item \textbf{What triggers a revision:} \code{adaptive\_review} --- a critic LLM given the overall task, the latest step's
 summary$+$outcome, and the unrun steps --- returns \code{AdaptiveReview(needs\_adaptation, recommendations)}.
 \code{route\_after\_review} branches to \code{replan\_tail} \emph{iff} the step was \code{fulfilled}, the plan is not exhausted,
 \emph{and} \code{needs\_adaptation} is set; otherwise it advances to the next step or halts at \code{END}.
-
-\textbf{What may change.} Only the \emph{tail} \code{plan.sub\_tasks[n\_done:]}: \code{replan\_tail} asks the planner LLM (given the
+\item \textbf{What may change:} only the \emph{tail} \code{plan.sub\_tasks[n\_done:]}: \code{replan\_tail} asks the planner LLM (given the
 completed summaries, the current tail, and the recommendations) for a replacement tail, and \code{merge\_plan} sets
 \code{plan = completed\_prefix + new\_tail}.
-
-\textbf{What is held fixed.} The completed prefix \code{plan.sub\_tasks[:n\_done]}, its stored summaries/outcomes, and
+\item \textbf{What is held fixed:} the completed prefix \code{plan.sub\_tasks[:n\_done]}, its stored summaries/outcomes, and
 \code{step\_index} are never touched by a revision, so executed work is neither re-run nor re-ordered.
-
-\textbf{How it terminates.} A router returns \code{END} as soon as a step is \emph{not} \code{fulfilled} or the plan is exhausted
+\item \textbf{How it terminates:} a router returns \code{END} as soon as a step is \emph{not} \code{fulfilled} or the plan is exhausted
 (\code{step\_index $>$ len(plan)}); \code{execute\_step} advances \code{step\_index} by one per step while a revision never does, so
 the plan is consumed only by execution and the loop halts once the replanner stops extending the tail. The sole hard backstop is
 LangGraph's default \code{recursion\_limit}, which \emph{raises} rather than finishing --- whether this is a genuine guarantee is
 taken up in II.2.
+\end{itemize}
 
 \section*{II.2\quad Problems}
 
@@ -105,11 +104,13 @@ free-text ``keep the tail minimal'' instruction to an LLM is no such contraction
 surfaces as an \emph{exception}, not a finished run --- and the bounded-loop safeguard the initial planner relies on
 (\code{num\_rounds}) was dropped here.
 
-\textbf{P2 --- Adaptation is disabled exactly when it is most needed.} \code{route\_after\_review} returns \code{END} the instant an
-outcome is \code{fulfilled=False} --- and it checks this \emph{before} \code{needs\_adaptation}, so the \code{adaptive\_review} LLM
-still runs and its verdict is silently discarded. The loop therefore replans after \emph{successful} steps but \emph{gives up} on a
-failed one, with no repair, retry, or route-around. This inverts the purpose of closed-loop control, which exists to reject
-disturbances and correct errors: here good news triggers feedback while bad news triggers a halt.
+\textbf{P2 --- Adaptation is scoped to successful steps, not to recovery.} The loop revises only after a \emph{successful} step:
+\code{route\_after\_review} tests \code{fulfilled} \emph{before} \code{needs\_adaptation}, so a \code{fulfilled=False} outcome routes
+to \code{END} (the \code{adaptive\_review} verdict, though computed, then goes unused). This is a coherent design --- adaptation here
+is meant to make an \emph{already-working} execution more responsive to what it has learned, not to repair a failing one. The
+limitation is that the closed-loop benefit (using feedback to correct course) stays confined to the success path: a failed step
+simply ends the run, with no retry or route-around. Where a failed step is often recoverable, extending adaptation to that case
+(II.3) would widen the benefit.
 
 \textbf{P3 --- The replanned tail bypasses the reviewer that gates the initial plan.} \code{planning/} accepts a plan only after a
 bounded \code{planner}$\leftrightarrow$\code{plan\_reviewer} propose--critique loop. The adaptive replan has \emph{no} reviewer:
@@ -117,8 +118,8 @@ bounded \code{planner}$\leftrightarrow$\code{plan\_reviewer} propose--critique l
 surprising result, i.e.\ exactly when error is likeliest --- thus receive \emph{weaker} quality control than the original plan, and
 can drift from \code{main\_task} or contradict the frozen prefix with nothing to catch it.
 
-\textbf{P4 --- Myopic feedback at unconditional cost.} \code{adaptive\_review} sees only the \emph{last} step's summary$+$outcome and
-the remaining steps --- not the full trajectory or the artifacts produced --- so its decision is greedy (Markov on the last step)
+\textbf{P4 --- Partial-state feedback at unconditional cost.} \code{adaptive\_review} sees only the \emph{last} step's summary$+$outcome and
+the remaining steps --- not the full trajectory or the artifacts produced --- so its decision is conditioned on the last step alone (effectively Markov)
 and cross-step drift is invisible; closed-loop control needs full-state feedback, not a single observation. It also fires after
 \emph{every} step regardless of need (and the planner on every revision), so token cost and latency scale with plan length with no
 gating.
@@ -131,9 +132,9 @@ hits zero; optionally reject any \code{new\_tail} that would push the plan past 
 strictly-decreasing quantity, so termination no longer rests on LLM goodwill. \emph{Trade-off:} a hard cap can truncate a genuinely
 expanding task --- so surface ``budget exhausted'' as an explicit, inspectable outcome rather than a silent stop.
 
-\textbf{P2 $\to$ repair on failure instead of halting.} On \code{fulfilled=False}, route to \code{replan\_tail} (or a dedicated
-\code{repair} node) with a per-step retry budget, halting only after $K$ failed attempts. \emph{Why:} makes the loop genuinely
-closed over errors --- the failure becomes the feedback that drives a re-plan, which is the entire point of adaptive planning.
+\textbf{P2 $\to$ add a recovery path on failure.} On \code{fulfilled=False}, route to \code{replan\_tail} (or a dedicated
+\code{repair} node) with a per-step retry budget, halting only after $K$ failed attempts. \emph{Why:} extends the closed-loop
+benefit to the failure case --- a recoverable error drives a re-plan rather than ending the run.
 \emph{Trade-off:} extra execution/LLM cost and a risk of looping on an impossible step, both bounded by the retry budget; needs a
 recoverable-vs-fatal flag in the outcome.
 
