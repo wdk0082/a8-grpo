@@ -8,7 +8,7 @@ Part I of the Cambridge *Multi-Agent Systems & Agentic AI* practical: GRPO LoRA 
 
 | Path | What |
 | --- | --- |
-| `report/` | **the deliverable**: `report_part1.pdf` + its self-contained LaTeX source |
+| `report/` | **the deliverable**: `report.pdf` (Parts I & II combined) + its self-contained LaTeX source `report.tex` |
 | `tpu-2026/` + `tpu-2026_our_changes.patch` | training code (detached upstream clone) + our changes as a single diff |
 | `analysis/` | figure & CI tooling (`plot_report.py`, `paired_ci.py`, `export_wandb.py`) — run from the repo root |
 | `training_logs/` | per-run W&B scalar exports (`tb_scalars_R0..R5.csv`) — sources for the training curves |

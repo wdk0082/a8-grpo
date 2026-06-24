@@ -3,12 +3,15 @@
 \usepackage[T1]{fontenc}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage{booktabs}
 \usepackage{subcaption}
 \usepackage{caption}
 \usepackage{microtype}
 \usepackage{enumitem}
 \usepackage{titlesec}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.misc}
 \usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
 
@@ -28,18 +31,40 @@
 \newcommand{\Var}{\operatorname{Var}}
 \newcommand{\Cov}{\operatorname{Cov}}
 
+% --- merge plumbing: starred sections/subsections enter the ToC one level deeper;
+%     \partheading is a Part-level (section) ToC entry; \plaintoc restores plain
+%     sectioning so \tableofcontents does not list itself ---
+\setcounter{tocdepth}{3}
+\makeatletter
+\let\origsec\section
+\let\origsubsec\subsection
+\renewcommand{\section}{\@ifstar{\tx@sec}{\origsec}}
+\newcommand{\tx@sec}[1]{\phantomsection\origsec*{#1}\addcontentsline{toc}{subsection}{#1}}
+\renewcommand{\subsection}{\@ifstar{\tx@subsec}{\origsubsec}}
+\newcommand{\tx@subsec}[1]{\phantomsection\origsubsec*{#1}\addcontentsline{toc}{subsubsection}{#1}}
+\newcommand{\partheading}[1]{\par\addvspace{1.4ex}\phantomsection\addcontentsline{toc}{section}{#1}%
+  {\Large\bfseries #1}\par\vspace{0.3ex}\hrule\vspace{0.9ex}}
+\makeatother
+\newcommand{\plaintoc}{{\let\section\origsec\let\subsection\origsubsec\tableofcontents}}
+
 \begin{document}
 \begin{center}
-  {\Large\bfseries Part I --- GRPO Finetuning of \texttt{gemma-3-1b-it} on GSM8K}\\[3pt]
-  {Multi-Agent Systems and Agentic AI --- Practical Examination}\\[5pt]
+  {\LARGE\bfseries Multi-Agent Systems \& Agentic AI --- Practical Examination}\\[4pt]
+  {\large Part I --- GRPO finetuning of \texttt{gemma-3-1b-it} on GSM8K\\[2pt]
+  Part II --- adaptive planning in \texttt{cmbagent\_lg}}\\[6pt]
   {\small Team \textbf{chmawa} (sm3035, bc654, zw499)\quad$\cdot$\quad written individually by Zixuan Wang (zw499)}\\[3pt]
   {\small\itshape Jointly owned (shared team work): the v6e-1 TPU, the six shared GRPO runs R0--R5, and the code repository.
-  All prose, figure selection and interpretation below are my own.}\\[3pt]
+  All prose, figure selection and interpretation are my own.}\\[3pt]
   {\small Code: \href{https://github.com/wdk0082/a8-grpo}{\texttt{github.com/wdk0082/a8-grpo}} \emph{(to be ported to GitLab for submission)}\;$\mid$\;
-  W\&B: \href{https://wandb.ai/sichengma0514-university-of-cambridge/a8-grpo}{\texttt{a8-grpo}}\;$\mid$\;
-  \axv{2402.03300}{GRPO}, \axv{2503.14476}{DAPO}, \axv{2106.09685}{LoRA}, \href{https://huggingface.co/datasets/openai/gsm8k}{GSM8K}}
+  W\&B: \href{https://wandb.ai/sichengma0514-university-of-cambridge/a8-grpo}{\texttt{a8-grpo}}\\[2pt]
+  References: \axv{2402.03300}{GRPO}, \axv{2503.14476}{DAPO}, \axv{2106.09685}{LoRA}, \href{https://huggingface.co/datasets/openai/gsm8k}{GSM8K}}
 \end{center}
-\vspace{1pt}\hrule\vspace{4pt}
+\vspace{2pt}\hrule\vspace{6pt}
+
+{\hypersetup{linkcolor=black}\plaintoc}
+\clearpage
+
+\partheading{Part I --- GRPO Finetuning of \texttt{gemma-3-1b-it} on GSM8K}
 
 \section*{I.1\quad Reproducing the baseline}
 \textbf{(i) The run.} We reproduce the baseline as run \textbf{R0} (\wb{8c2785ut}): upstream commit
@@ -107,6 +132,13 @@ should curb the drift. We test both with a controlled $\beta\times G$ \textbf{2$
 R3b$(G{=}8,\beta{=}0)$, R5$(G{=}8,\beta{=}.08)$ --- plus a $\beta$-axis extension R1$(G{=}2,\beta{=}.3)$, for \textbf{five full runs} sharing data
 (HF GSM8K, seed 42), eval, horizon (3364 steps) and rollout RNG (\code{PRNGKey(0)}); only the named knob changes.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.58\linewidth]{F1_reward_kl.pdf}
+\caption{Mean training reward $\bar r$ (top) and $\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ (bottom) vs.\ GRPO step, for all five runs on shared axes. R0 over-optimises (reward peaks then declines) and R1 collapses (KL blow-up ${\sim}$step 1700); the $G{=}8$ runs (R3b, R5) and R4 stay stable.}
+\label{fig:rewardkl}
+\end{figure}
+
 \begin{table}[t]
 \centering\small
 \caption{Held-out accuracy on the \emph{full} GSM8K test ($n{=}1319$, HF split, seed 42), greedy/exact-match, $\pm$95\% bootstrap CI; each run trained for the full \textbf{3364} GRPO steps (one epoch), scored at its \emph{best-val} (the saved checkpoint nearest the peak held-out validation \emph{reward}) and \emph{final} (step 3364) checkpoints.
@@ -132,21 +164,6 @@ R5 & $(8,.08)$ final 3364 & 55.6 & 52.8--58.2 & $+8.2^{\ast}$ \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.72\linewidth]{F1_reward_kl.pdf}
-\caption{Mean training reward $\bar r$ (top) and $\mathrm{KL}(\pi_\theta\Vert\pi_{\mathrm{ref}})$ (bottom) vs.\ GRPO step, for all five runs on shared axes. R0 over-optimises (reward peaks then declines) and R1 collapses (KL blow-up ${\sim}$step 1700); the $G{=}8$ runs (R3b, R5) and R4 stay stable.}
-\label{fig:rewardkl}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\begin{subfigure}{0.46\linewidth}\centering\includegraphics[width=\linewidth]{F4_2x2_GxB.pdf}\caption{$\beta\times G$ 2$\times$2 (best/final acc).}\label{fig:2x2}\end{subfigure}\hfill
-\begin{subfigure}{0.46\linewidth}\centering\includegraphics[width=\linewidth]{S3_group_degeneracy.pdf}\caption{Group degeneracy at $G{=}8$.}\label{fig:diag}\end{subfigure}
-\caption{\emph{Left:} accuracy by $(G,\beta)$ --- collapse occurs \emph{only} at $G{=}2,\beta{>}0$ (R0). \emph{Right:} the diagnostic --- at $G{=}8$ about a
-third of groups are degenerate (all-$K$ rewards equal) yet $\sigma_r$ holds $\approx1.5$ (steady, not $\to0$).}
-\end{figure}
-
 \textbf{(a) Accuracy} (Table~\ref{tab:acc}): base, the baseline R0, and the improved checkpoints on the full test ($n{=}1319$, seed 42), with
 $\pm$95\% bootstrap and paired-$\Delta$ CIs over the shared prompts.
 
@@ -154,6 +171,14 @@ $\pm$95\% bootstrap and paired-$\Delta$ CIs over the shared prompts.
 
 \textbf{(c) Diagnostic} (Fig.~\ref{fig:diag}): group degeneracy at $G{=}8$ --- about a third of groups are all-$K$-equal (zero advantage) yet
 within-group $\sigma_r$ holds $\approx1.5$, not $\to0$.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.60\linewidth}\centering\includegraphics[width=\linewidth]{F4_2x2_GxB.pdf}\caption{$\beta\times G$ 2$\times$2 (best/final acc).}\label{fig:2x2}\end{subfigure}\hfill
+\begin{subfigure}{0.60\linewidth}\centering\includegraphics[width=\linewidth]{S3_group_degeneracy.pdf}\caption{Group degeneracy at $G{=}8$.}\label{fig:diag}\end{subfigure}
+\caption{\emph{Left:} accuracy by $(G,\beta)$ --- collapse occurs \emph{only} at $G{=}2,\beta{>}0$ (R0). \emph{Right:} the diagnostic --- at $G{=}8$ about a
+third of groups are degenerate (all-$K$ rewards equal) yet $\sigma_r$ holds $\approx1.5$ (steady, not $\to0$).}
+\end{figure}
 
 \textbf{(d) Findings vs.\ prediction.} \emph{Prediction (1) holds.} $G{=}8$ is the winning intervention: \textbf{R3b ($G{=}8,\beta{=}0$) is the best
 model at 57.2\%} ($+9.9$\,pp over base, paired CI excludes 0); both $G{=}8$ runs beat base and each beats its matched $G{=}2$ run, and the 2$\times$2
@@ -710,5 +735,132 @@ One concrete fix is to shrink the mixture weight with length, taking $\alpha=\al
     w_i=c_T^{\,T}\longrightarrow e^{-\kappa}>0 .
 \]
 The trade-off is weaker uniform exploration on long responses.
+
+\clearpage
+\partheading{Part II --- Adaptive planning in \texttt{cmbagent\_lg}}
+
+\noindent Studied in full at commit \href{https://github.com/borisbolliet/cmbagent_lg/tree/d7d0592a714e4cc01c97f1b77afdd57a208b18db}{\texttt{d7d0592}}
+(\texttt{adaptive-planning} branch), module \href{https://github.com/borisbolliet/cmbagent_lg/tree/d7d0592a714e4cc01c97f1b77afdd57a208b18db/cmbagent_lg/adaptive_planning}{\texttt{cmbagent\_lg/adaptive\_planning}}
+(graph, nodes, state, schemas, prompts), which composes the \texttt{planning/} and \texttt{deep\_research/} modules.
+
+\section*{II.1\quad Workflow diagram}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  >={Stealth[length=2.6mm,width=2mm]}, font=\small,
+  proc/.style={rectangle, rounded corners=2.5pt, draw=blue!55, fill=blue!7, align=center,
+               inner xsep=9pt, inner ysep=6pt},
+  rt/.style={rectangle, rounded corners=2.5pt, draw=orange!80!black, fill=orange!15, align=center,
+             inner xsep=9pt, inner ysep=6pt},
+  term/.style={rounded rectangle, draw=black!55, fill=black!8, align=center, inner sep=4pt, font=\footnotesize\bfseries},
+  e/.style={->, semithick, draw=black!72},
+  lbl/.style={font=\footnotesize, inner sep=2.5pt, fill=white},
+]
+\node[term] (start) at (0,0) {START};
+\node[proc] (exec)   at (0,-1.7) {\code{execute\_step} {\footnotesize($=$\,\code{deep\_research.run\_step})}};
+\node[proc] (rev)    at (0,-3.4) {\code{adaptive\_review} {\footnotesize(critic LLM $\Rightarrow$ \code{AdaptiveReview})}};
+\node[rt]   (r1)     at (0,-5.1) {\code{route\_after\_review}};
+\node[proc] (replan) at (0,-6.8) {\code{replan\_tail} {\footnotesize(planner LLM $\Rightarrow$ new tail)}};
+\node[proc] (merge)  at (0,-8.3) {\code{merge\_plan} {\footnotesize(prefix $+$ new tail)}};
+\node[rt]   (r2)     at (0,-9.8) {\code{route\_after\_merge}};
+\node[term] (end)    at (8.4,-5.1) {END};
+
+\draw[e] (start) -- (exec);
+\draw[e] (exec)  -- (rev)  node[lbl,midway,right]{$+$summary, $+$outcome;\ \ \code{step\_index}{+}{+}};
+\draw[e] (rev)   -- (r1);
+\draw[e] (r1)    -- (replan) node[lbl,midway,right]{\code{needs\_adaptation}};
+\draw[e] (replan)-- (merge);
+\draw[e] (merge) -- (r2);
+\draw[e] (r1.east) -- (end.west) node[lbl,midway,above,align=center]{step not \code{fulfilled},\\ or plan exhausted};
+\draw[e] (r2.east) -| (end) node[lbl,pos=0.13,below]{plan exhausted};
+% back-edges to execute_step (next step)
+\draw[e] (r1.west) -- ++(-2.7,0) |- (exec.west);
+\draw[e] (r2.west) -- ++(-4.3,0) |- ([yshift=-2.4mm]exec.west);
+\node[lbl,align=center] at (-3.45,-4.6) {advance:\\ no adaptation};
+\node[lbl] at (-3.45,-9.45) {steps remain};
+\end{tikzpicture}
+\caption{Adaptive-planning LangGraph graph (\code{adaptive\_planning/graph.py}). Blue $=$ work nodes, orange $=$ conditional
+routers; the threaded \code{AdaptivePlanState} carries \code{plan}, \code{step\_index}, \code{step\_summaries}/\code{step\_outcomes},
+\code{adaptive\_review}, \code{new\_tail}, \code{adaptive\_history}. \emph{(Excluded from the 2-page limit.)}}
+\end{figure}
+
+\noindent\textbf{Walkthrough.} The initial \code{Plan} comes from the bounded propose--critique loop in \code{planning/}; this graph
+executes it. \code{execute\_step} (\code{deep\_research}'s \code{run\_step}, reused verbatim) runs the step at \code{step\_index},
+appends a summary and a structured outcome \{\code{fulfilled},\dots\}, increments \code{step\_index}, and always passes to
+\code{adaptive\_review}. The four things the brief asks for:
+\begin{itemize}[leftmargin=2.2em,label={},topsep=3pt,itemsep=4pt]
+\item \textbf{What triggers a revision:} \code{adaptive\_review} --- a critic LLM given the overall task, the latest step's
+summary$+$outcome, and the unrun steps --- returns \code{AdaptiveReview(needs\_adaptation, recommendations)}.
+\code{route\_after\_review} branches to \code{replan\_tail} \emph{iff} the step was \code{fulfilled}, the plan is not exhausted,
+\emph{and} \code{needs\_adaptation} is set; otherwise it advances to the next step or halts at \code{END}.
+\item \textbf{What may change:} only the \emph{tail} \code{plan.sub\_tasks[n\_done:]}: \code{replan\_tail} asks the planner LLM (given the
+completed summaries, the current tail, and the recommendations) for a replacement tail, and \code{merge\_plan} sets
+\code{plan = completed\_prefix + new\_tail}.
+\item \textbf{What is held fixed:} the completed prefix \code{plan.sub\_tasks[:n\_done]}, its stored summaries/outcomes, and
+\code{step\_index} are never touched by a revision, so executed work is neither re-run nor re-ordered.
+\item \textbf{How it terminates:} a router returns \code{END} as soon as a step is \emph{not} \code{fulfilled} or the plan is exhausted
+(\code{step\_index $>$ len(plan)}); \code{execute\_step} advances \code{step\_index} by one per step while a revision never does, so
+the plan is consumed only by execution and the loop halts once the replanner stops extending the tail. The sole hard backstop is
+LangGraph's default \code{recursion\_limit}, which \emph{raises} rather than finishing --- whether this is a genuine guarantee is
+taken up in II.2.
+\end{itemize}
+
+\section*{II.2\quad Problems}
+
+\textbf{P1 --- Termination is not \emph{guaranteed}.} The graph \emph{does} have a stopping rule --- \code{route\_after\_review}
+and \code{route\_after\_merge} return \code{END} the moment a step is not \code{fulfilled} or the plan is exhausted
+(\code{step\_index $>$ len(plan)}), so a well-behaved run does terminate. The defect is that nothing \emph{forces} that rule to be
+reached: \code{step\_index} advances only in \code{execute\_step}, whereas \code{replan\_tail} may return a tail \emph{longer} than
+the steps it replaces and \code{merge\_plan} routes straight back into execution. With no revision budget, no length cap and no
+monotone quantity that must strictly decrease, the plan can grow without bound and the ``exhausted'' condition recede forever.
+Closed-loop control is well-behaved only when the feedback law contracts toward the goal (a Lyapunov/termination argument), and a
+free-text ``keep the tail minimal'' instruction to an LLM is no such contraction. The only hard backstop, \code{recursion\_limit},
+surfaces as an \emph{exception}, not a finished run --- and the bounded-loop safeguard the initial planner relies on
+(\code{num\_rounds}) was dropped here.
+
+\textbf{P2 --- Adaptation is scoped to successful steps, not to recovery.} The loop revises only after a \emph{successful} step:
+\code{route\_after\_review} tests \code{fulfilled} \emph{before} \code{needs\_adaptation}, so a \code{fulfilled=False} outcome routes
+to \code{END} (the \code{adaptive\_review} verdict, though computed, then goes unused). This is a coherent design --- adaptation here
+is meant to make an \emph{already-working} execution more responsive to what it has learned, not to repair a failing one. The
+limitation is that the closed-loop benefit (using feedback to correct course) stays confined to the success path: a failed step
+simply ends the run, with no retry or route-around. Where a failed step is often recoverable, extending adaptation to that case
+(II.3) would widen the benefit.
+
+\textbf{P3 --- The replanned tail bypasses the reviewer that gates the initial plan.} \code{planning/} accepts a plan only after a
+bounded \code{planner}$\leftrightarrow$\code{plan\_reviewer} propose--critique loop. The adaptive replan has \emph{no} reviewer:
+\code{merge\_plan} splices the planner's \code{new\_tail} unchecked. Revisions --- generated mid-run under the pressure of a
+surprising result, i.e.\ exactly when error is likeliest --- thus receive \emph{weaker} quality control than the original plan, and
+can drift from \code{main\_task} or contradict the frozen prefix with nothing to catch it.
+
+\textbf{P4 --- Partial-state feedback at unconditional cost.} \code{adaptive\_review} sees only the \emph{last} step's summary$+$outcome and
+the remaining steps --- not the full trajectory or the artifacts produced --- so its decision is conditioned on the last step alone (effectively Markov)
+and cross-step drift is invisible; closed-loop control needs full-state feedback, not a single observation. It also fires after
+\emph{every} step regardless of need (and the planner on every revision), so token cost and latency scale with plan length with no
+gating.
+
+\section*{II.3\quad Proposed improvements}
+
+\textbf{P1 $\to$ bound the loop.} Thread a \code{revision\_budget} (and/or \code{max\_steps}) through \code{AdaptivePlanState},
+decrement it in \code{merge\_plan}, and have the routers \emph{finish gracefully} (run out the current tail, then \code{END}) once it
+hits zero; optionally reject any \code{new\_tail} that would push the plan past a length cap. \emph{Why:} reinstates a
+strictly-decreasing quantity, so termination no longer rests on LLM goodwill. \emph{Trade-off:} a hard cap can truncate a genuinely
+expanding task --- so surface ``budget exhausted'' as an explicit, inspectable outcome rather than a silent stop.
+
+\textbf{P2 $\to$ add a recovery path on failure.} On \code{fulfilled=False}, route to \code{replan\_tail} (or a dedicated
+\code{repair} node) with a per-step retry budget, halting only after $K$ failed attempts. \emph{Why:} extends the closed-loop
+benefit to the failure case --- a recoverable error drives a re-plan rather than ending the run.
+\emph{Trade-off:} extra execution/LLM cost and a risk of looping on an impossible step, both bounded by the retry budget; needs a
+recoverable-vs-fatal flag in the outcome.
+
+\textbf{P3 $\to$ validate the replanned tail.} Before \code{merge\_plan}, pass \code{new\_tail} through the existing \code{planning}
+\code{plan\_reviewer} for one critique round against \code{main\_task} and the frozen prefix, regenerating if it diverges.
+\emph{Why:} gives revisions the same quality gate as the initial plan, closing the asymmetry in P3. \emph{Trade-off:} one extra
+reviewer call (and possibly a planner re-pass) per revision --- bound it to a single round to cap added latency.
+
+\textbf{P4 $\to$ richer, gated feedback.} Give the reviewer the full step history and original goal (global state), and \emph{gate}
+the call --- use a cheap model (or skip it) when the outcome shows no downstream impact, escalating to the full critic only on
+flagged steps. \emph{Why:} full-state feedback catches multi-step drift; gating removes the per-step tax. \emph{Trade-off:} more
+context costs tokens, and gating risks missing a non-obvious adaptation --- so gate conservatively.
 
 \end{document}
