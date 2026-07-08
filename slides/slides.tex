@@ -360,23 +360,56 @@ R5 & $(8,.08)$ final 3364 & 55.6 & 52.8--58.2 & $+8.2^{\ast}$ \\
 \end{columns}
 \end{frame}
 
-\begin{frame}{Part II\quad Problems $\rightarrow$ proposed fixes}
-\small
-\renewcommand{\arraystretch}{1.35}
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.445\linewidth}@{\ $\rightarrow$\ }>{\raggedright\arraybackslash}p{0.445\linewidth}@{}}
+\begin{frame}{Part II\quad Problems $\rightarrow$ proposed fixes\ \ (1/2)}
+\vfill
+\begin{center}
+{\small
+\renewcommand{\arraystretch}{1.45}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.45\linewidth}@{\ \ $\rightarrow$\ \ }>{\raggedright\arraybackslash}p{0.45\linewidth}@{}}
 \toprule
 \multicolumn{1}{@{}c}{\textbf{\bad{Problem}}} & \multicolumn{1}{c@{}}{\textbf{\good{Fix}}}\\
 \midrule
+\addlinespace[1ex]
 \textbf{P1 Termination not \emph{guaranteed}} --- the replanned tail can grow unboundedly; no monotone-decreasing quantity; \code{recursion\_limit} \emph{raises}, not finishes.
 & Thread a \textbf{revision budget / max-steps}; routers finish gracefully; reject over-long tails. \emph{(A hard cap can truncate a genuine expansion.)}\\
+\addlinespace[3.5ex]
 \textbf{P2 Adaptation only on \emph{success}} --- a \code{fulfilled=False} step routes straight to END; no retry or route-around.
 & Add a \textbf{recovery / repair path} on failure with a per-step retry budget. \emph{(Needs a recoverable-vs-fatal flag.)}\\
+\addlinespace[1ex]
+\bottomrule
+\end{tabular}}
+\end{center}
+\vfill
+\end{frame}
+
+\begin{frame}{Part II\quad Problems $\rightarrow$ proposed fixes\ \ (2/2)}
+\vfill
+\begin{center}
+{\small
+\renewcommand{\arraystretch}{1.45}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.45\linewidth}@{\ \ $\rightarrow$\ \ }>{\raggedright\arraybackslash}p{0.45\linewidth}@{}}
+\toprule
+\multicolumn{1}{@{}c}{\textbf{\bad{Problem}}} & \multicolumn{1}{c@{}}{\textbf{\good{Fix}}}\\
+\midrule
+\addlinespace[1ex]
 \textbf{P3 Replanned tail \emph{bypasses} the reviewer} that gates the initial plan --- \code{merge\_plan} splices it unchecked.
 & Route \code{new\_tail} through the \textbf{existing \code{plan\_reviewer}} for one critique round. \emph{(One extra reviewer call.)}\\
+\addlinespace[3.5ex]
 \textbf{P4 Partial-state feedback at unconditional cost} --- sees only the \emph{last} step (Markov); fires every step.
 & \textbf{Full-history, gated} review --- cheap model / skip when no downstream impact. \emph{(Gate conservatively.)}\\
+\addlinespace[1ex]
 \bottomrule
-\end{tabular}
+\end{tabular}}
+\end{center}
+\vfill
+\end{frame}
+
+%============================================================
+\begin{frame}[plain]
+\centering
+\vfill
+{\Huge\bfseries Thank you}
+\vfill
 \end{frame}
 
 \end{document}
