@@ -264,6 +264,15 @@ R5 & $(8,.08)$ final 3364 & 55.6 & 52.8--58.2 & $+8.2^{\ast}$ \\
 \end{frame}
 
 \begin{frame}{I.3\quad Improving the baseline}
+\textbf{Held-out accuracy per checkpoint} --- the previous table as a bar chart (exact match, $\pm$95\% bootstrap CI):
+\vspace{3pt}
+\centering
+\includegraphics[width=0.95\linewidth]{F2_accuracy.pdf}\\[5pt]
+\raggedright\small
+\good{\textbf{R3b}} ($K{=}8$) tops out at \textbf{57.2\%}; both $K{=}8$ runs beat base at best \emph{and} final, while \bad{R0} and \bad{R1} \bad{collapse} to near-zero by their final step. (\run{R2} is a supplementary length-penalty variant.)
+\end{frame}
+
+\begin{frame}{I.3\quad Improving the baseline}
 \begin{columns}[c]
 \begin{column}{0.52\textwidth}\centering
 \includegraphics[height=0.74\textheight,width=\linewidth,keepaspectratio]{F4_2x2_GxB.pdf}
@@ -288,13 +297,12 @@ R5 & $(8,.08)$ final 3364 & 55.6 & 52.8--58.2 & $+8.2^{\ast}$ \\
 \end{column}
 \begin{column}{0.38\textwidth}
 \small
-\textbf{The cost of $K{=}8$: group degeneracy.}\ \ About \textbf{a third of groups are degenerate} --- all $K$ rewards equal $\Rightarrow$ \textbf{zero advantage}, wasted samples (the known dead-group / effective-sample-size failure mode).
-\vspace{6pt}
-
-Yet within-group $\sigma_r$ \textbf{holds $\approx1.5$} (steady, \emph{not} $\to0$).
-\vspace{6pt}
-
-The net effect is still \good{$+8$--$10$\,pp}.
+\textbf{The cost of $K{=}8$: group degeneracy.}
+\begin{itemize}
+  \item About \textbf{a third of groups are degenerate} --- all $K$ rewards equal $\Rightarrow$ \textbf{zero advantage} (wasted samples; the dead-group / effective-sample-size failure mode).
+  \item Yet within-group $\sigma_r$ \textbf{holds $\approx1.5$} --- steady, \emph{not} $\to0$.
+  \item Net effect still \good{$+8$--$10$\,pp}.
+\end{itemize}
 \end{column}
 \end{columns}
 \end{frame}
