@@ -162,44 +162,47 @@ R0 final (step 3364)           & \bad{0.0} & \bad{6.2} \\
 
 %============================================================
 \mysec{I.2  Understanding the baseline}
-\begin{frame}{I.2\quad Mapping the baseline onto the theory}
-\begin{columns}[T]
-\begin{column}{0.55\textwidth}
-\textbf{The three policies} (all share the frozen $W_0$):
+\begin{frame}{I.2\quad Understanding the baseline}
+\textbf{(a) The three policies} (all share the frozen $W_0$):
 \begin{itemize}
-  \item $\pth$ --- LoRA-adapted policy; the \alert{only} trainable policy (adapters $A,B$)
-  \item $\pold$ --- the rollout policy. With $\mu{=}\code{NUM\_ITERATIONS}{=}1$, one gradient step per batch $\Rightarrow$ $\pold{=}\pth$ at the update
-  \item $\pref$ --- frozen base Gemma (adapters off); since $B{=}0$ at init, $\pth{=}\pref$ exactly at step 0
+  \item $\pth$ --- LoRA-adapted policy; the \alert{only} trainable policy ($\Delta W = \textcolor{camred}{BA}$)
+  \item $\pold$ --- the rollout policy; with $\mu{=}\code{NUM\_ITERATIONS}{=}1$ (one gradient step per rollout batch), $\pold{=}\pth$ at the update
+  \item $\pref$ --- frozen base Gemma
 \end{itemize}
-\end{column}
-\begin{column}{0.45\textwidth}
-\textbf{Estimator \& clip}
-\begin{itemize}
-  \item $K{=}\code{NUM\_GENERATIONS}{=}2$; Tunix \code{'grpo'} $=$ \textbf{standard} group-mean, std-normalised over all $K$ (incl.\ $i$) --- \emph{not} leave-one-out
-\end{itemize}
+\vspace{6pt}
+\textbf{(b) Group size \& advantage.}\ \ $K{=}\code{NUM\_GENERATIONS}{=}2$; Tunix \code{'grpo'} is the \textbf{standard} group-mean, std-normalised advantage over all $K$ (incl.\ $i$) --- \emph{not} leave-one-out:
 \[
-  \hat g=\frac1K\sum_i h_i\,\hat A_i,\qquad h_i=\nabla_\theta\log\pth(a_i\mid q)
+  \hat A_i=\frac{r_i-\bar r}{\sigma_r},\qquad
+  \hat g=\frac1K\sum_{i=1}^K h_i\,\hat A_i,\qquad
+  h_i=\nabla_\theta\log\pth(a_i\mid q).
 \]
-\begin{itemize}
-  \item Clip $\epsilon{=}0.2$, but \alert{inert}: $\mu{=}1\Rightarrow\pold{=}\pth\Rightarrow\rho\equiv1$, nothing is clipped (and it is a \textbf{per-token} ratio, à la DAPO)
-\end{itemize}
-\end{column}
-\end{columns}
 \end{frame}
 
-\begin{frame}{I.2\quad The reward --- and why correctness alone stalls}
-\textbf{Reward $=$ sum of four} (Tunix rollout reward):
+\begin{frame}{I.2\quad Understanding the baseline}
+\textbf{(c) Reward $=$ sum of four}:
 \begin{itemize}
   \item \textbf{Shaping:} \code{match\_format\_exactly}, \code{match\_format\_approximately} (the \code{<reasoning>}/\code{<answer>} template)
-  \item \textbf{Correctness:} \code{check\_answer} (gold match, only if the template parses) $+$ \code{check\_numbers} (fallback)
+  \item \textbf{Correctness:} \code{check\_answer} (gold match, only if the template parses) $+$ \code{check\_numbers} (any number after \code{<answer>})
 \end{itemize}
-\vspace{3pt}
-\vspace{2pt}
-\textbf{With the correctness reward \emph{alone}, $\sigma_r$ vanishes on most groups} --- not because the model is rarely right (base $=47\%$) but because the reward is \textbf{coarse}: at $K{=}2$ the two siblings usually \emph{tie}, so
+\vspace{4pt}
+\textbf{With the correctness reward \emph{alone}, $\sigma_r$ vanishes on most groups} --- not because the model is rarely right (base $=47\%$) but because the reward is \textbf{coarse}: at $K{=}2$ the two samples usually \emph{tie}, so
 \[
-  \hat A_i \;=\; \frac{r_i-\bar r}{\sigma_r} \;=\; \frac{0}{\sigma_r+10^{-6}} \;=\; 0 \qquad(\text{exact zero: no signal, not an unstable }0/0).
+  \hat A_i \;=\; \frac{r_i-\bar r}{\sigma_r} \;=\; \frac{0}{\sigma_r+10^{-6}} \;=\; 0.
 \]
-The dense \textbf{shaping} terms keep $\sigma_r>0$ and push toward parseable outputs --- the precondition for correctness to vary --- but they also invite \alert{reward-hacking} (next).
+The dense \textbf{shaping} terms keep $\sigma_r>0$ and push toward parseable outputs (the precondition for \code{check\_answer} to vary), although they also invite reward-hacking.
+\end{frame}
+
+\begin{frame}{I.2\quad Understanding the baseline}
+\textbf{(d) The clipped surrogate.}\ \ The PPO-style clip lives in Tunix's \code{GRPOLearner} (\code{tunix.rl}); the clip range is $\epsilon{=}\code{EPSILON}{=}0.2$ in \code{config.py}. \textbf{Two deviations} from the lecture form:
+\vspace{5pt}
+
+\textbf{(i) Token- vs.\ sequence-level.}\ \ The lectures clip a \textbf{per-response} ratio (one clip per whole sequence); Tunix clips a \textbf{per-token} ratio, token-by-token (a token-level objective, as in \href{https://arxiv.org/abs/2503.14476}{DAPO}):
+\[
+  \rho_i=\frac{\pth(a_i\mid q)}{\pold(a_i\mid q)}
+  \qquad\text{vs.}\qquad
+  \rho_{i,t}=\frac{\pth(a_{i,t}\mid q,a_{i,<t})}{\pold(a_{i,t}\mid q,a_{i,<t})}.
+\]
+\textbf{(ii) The clip is \alert{inert} in this baseline.}\ \ With $\mu{=}\code{NUM\_ITERATIONS}{=}1$ (one gradient step per rollout batch) $\pold{=}\pth$, so every $\rho\equiv1$ and \textbf{nothing is ever clipped} --- the surrogate collapses to the plain policy gradient and $\epsilon$ is irrelevant. Not a \emph{contradiction} (the lecture form also reduces to this at $\mu{=}1$), but the baseline's ``clipped'' objective does no clipping until $\mu>1$.
 \end{frame}
 
 %============================================================
