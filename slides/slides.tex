@@ -194,15 +194,16 @@ The dense \textbf{shaping} terms keep $\sigma_r>0$ and push toward parseable out
 
 \begin{frame}{I.2\quad Understanding the baseline}
 \textbf{(d) The clipped surrogate.}\ \ The PPO-style clip lives in Tunix's \code{GRPOLearner} (\code{tunix.rl}); the clip range is $\epsilon{=}\code{EPSILON}{=}0.2$ in \code{config.py}. \textbf{Two deviations} from the lecture form:
-\vspace{5pt}
-
-\textbf{(i) Token- vs.\ sequence-level.}\ \ The lectures clip a \textbf{per-response} ratio (one clip per whole sequence); Tunix clips a \textbf{per-token} ratio, token-by-token (a token-level objective, as in \href{https://arxiv.org/abs/2503.14476}{DAPO}):
-\[
-  \rho_i=\frac{\pth(a_i\mid q)}{\pold(a_i\mid q)}
-  \qquad\text{vs.}\qquad
-  \rho_{i,t}=\frac{\pth(a_{i,t}\mid q,a_{i,<t})}{\pold(a_{i,t}\mid q,a_{i,<t})}.
-\]
-\textbf{(ii) The clip is \alert{inert} in this baseline.}\ \ With $\mu{=}\code{NUM\_ITERATIONS}{=}1$ (one gradient step per rollout batch) $\pold{=}\pth$, so every $\rho\equiv1$ and \textbf{nothing is ever clipped} --- the surrogate collapses to the plain policy gradient and $\epsilon$ is irrelevant. Not a \emph{contradiction} (the lecture form also reduces to this at $\mu{=}1$), but the baseline's ``clipped'' objective does no clipping until $\mu>1$.
+\vspace{3pt}
+\begin{itemize}
+  \item[\textcolor{camblue}{\textbf{(i)}}] \textbf{Token- vs.\ sequence-level.}\ \ The lectures clip a \textbf{per-response} ratio (one clip per whole sequence); Tunix clips a \textbf{per-token} ratio, token-by-token (a token-level objective):
+  \[
+    \rho_i=\frac{\pth(a_i\mid q)}{\pold(a_i\mid q)}
+    \qquad\text{vs.}\qquad
+    \rho_{i,t}=\frac{\pth(a_{i,t}\mid q,a_{i,<t})}{\pold(a_{i,t}\mid q,a_{i,<t})}.
+  \]
+  \item[\textcolor{camblue}{\textbf{(ii)}}] \textbf{The clip is \alert{inert} in this baseline.}\ \ With $\mu{=}\code{NUM\_ITERATIONS}{=}1$ (one gradient step per rollout batch) $\pold{=}\pth$, so every $\rho\equiv1$ and \textbf{nothing is ever clipped} --- the surrogate collapses to the plain policy gradient and $\epsilon$ is irrelevant. Not a \emph{contradiction} (the lecture form also reduces to this at $\mu{=}1$), but the baseline's ``clipped'' objective does no clipping until $\mu>1$.
+\end{itemize}
 \end{frame}
 
 %============================================================
