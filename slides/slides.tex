@@ -208,127 +208,79 @@ The dense \textbf{shaping} terms keep $\sigma_r>0$ and push toward parseable out
 
 %============================================================
 \mysec{I.3  Improving on the baseline}
-\begin{frame}{I.3\quad Why the baseline collapses: gradient variance}
-\textbf{Motivation (grounded in the lecture estimator).} The group-mean gradient has variance
-\[
-  \Var(\hat g) \;=\; \frac{1}{K^2}\sum_{i}(h_i-\bar h)(h_i-\bar h)^\top \;=\; O\!\left(\tfrac1K\right),
-\]
-\begin{itemize}
-  \item \alert{Maximal at the baseline's $K{=}2$} $\Rightarrow$ noisiest updates
-  \item Noisy updates let the policy chase the \textbf{dense shaping} reward (hack the format) while \textbf{true correctness decays}
-\end{itemize}
-\vspace{4pt}
+\begin{frame}{I.3\quad Improving the baseline}
+\textbf{Motivation.}\ \ From the R0 training logs, we empirically found that the baseline \run{R0} \bad{over-optimises} --- training reward peaks then declines, and its reference-KL climbs \textbf{above 1} (\emph{left}); the reward decomposition (\emph{right}) reveals the mechanism --- \run{R0}'s \good{correctness} (\code{check\_answer}) decays while format-shaping stays pinned high: \textbf{reward-hacking}.
 \vspace{2pt}
-{\color{camgreen}\textbf{Prediction to test:}}\ \ raising the group size $K$ shrinks $\Var(\hat g)\propto 1/K$ $\Rightarrow$ smoother updates and \textbf{milder over-optimisation}.
-\end{frame}
-
-\begin{frame}{I.3\quad The smoking gun: reward decomposition}
-\begin{columns}[T]
-\begin{column}{0.66\textwidth}
-\centering
-\includegraphics[width=\linewidth,height=0.82\textheight,keepaspectratio]{S1_reward_decomp.pdf}
+\begin{columns}[c]
+\begin{column}{0.42\textwidth}\centering
+\includegraphics[height=0.60\textheight,width=\linewidth,keepaspectratio]{F1_reward_kl.pdf}
 \end{column}
-\begin{column}{0.33\textwidth}
-\small
-In \run{R0}, the \good{correctness} reward (\code{check\_answer}) \textbf{decays} after $\approx$ step 1000 while \textbf{format-shaping stays pinned high} --- textbook reward-hacking.
-\vspace{4pt}
-
-\run{R1} ($\beta{=}0.3$) collapses entirely $\approx$ step 1700.
-\vspace{4pt}
-
-The stable $K{=}8$ runs (\run{R3b}, \run{R5}) keep correctness \emph{high throughout}.
+\begin{column}{0.57\textwidth}\centering
+\includegraphics[height=0.60\textheight,width=\linewidth,keepaspectratio]{S1_reward_decomp.pdf}
 \end{column}
 \end{columns}
 \end{frame}
 
-\begin{frame}{I.3\quad Two hypotheses, one controlled $2\times2$}
-\begin{columns}[T]
-\begin{column}{0.54\textwidth}
-\textbf{(1) Variance.} Raise $K$ $\Rightarrow$ $\Var(\hat g)\propto1/K$ $\Rightarrow$ less over-optimisation.
-\vspace{4pt}
-
-\textbf{(2) Regularisation.} The KL penalty pulls toward $\pref$; its penalised optimum is
+\begin{frame}{I.3\quad Improving the baseline}
+\textbf{Why R0 fails.}\ \ The group-mean gradient has variance
 \[
-  \pi^\star(a)\;\propto\;\pref(a)\,e^{\hat A(a)/\beta}\;\xrightarrow[\beta\to\infty]{}\;\pref,
+  \Var(\hat g)=\frac{1}{K^2}\sum_i (h_i-\bar h)(h_i-\bar h)^\top = O(1/K),
 \]
-so a \emph{tighter} leash (larger $\beta$) should curb the drift.
-\end{column}
-\begin{column}{0.44\textwidth}
-\begin{block}{Design: $\beta\times K$ grid $+$ a $\beta$-axis extension}
-\centering\small
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{c|ccc}
-      & $\beta{=}0$ & $\beta{=}0.08$ & $\beta{=}0.3$ \\ \hline
-$K{=}2$ & R4 & \textbf{R0}\,(base) & R1 \\
-$K{=}8$ & \textbf{R3b} & R5 & --- \\
+maximal at the baseline's $K{=}2$ --- the noisiest updates, which let the policy chase the dense \textbf{shaping} reward (reward-hacking) while true correctness decays.
+\vspace{5pt}
+
+\textbf{Two predictions:}
+\begin{itemize}
+  \item[\textcolor{camgreen}{\textbf{(1)}}] \textbf{Variance.}\ \ Raising $K$ shrinks $\Var(\hat g)\propto1/K$ $\Rightarrow$ smoother updates, \textbf{milder over-optimisation}.
+  \item[\textcolor{camgreen}{\textbf{(2)}}] \textbf{KL leash.}\ \ The reference-KL already climbs well above $1$ (previous slide), so a \emph{larger} $\beta$ (tighter KL penalty) might rein in the reward-hacking.
+\end{itemize}
+\vspace{3pt}
+\textbf{Test:}\ \ a controlled $\beta\times K$ 2$\times$2 --- \run{R4}$(2,0)$, \run{R0}$(2,.08)$, \run{R3b}$(8,0)$, \run{R5}$(8,.08)$ --- plus \run{R1}$(2,.3)$; \textbf{5 runs}, only the named knob changes.
+\end{frame}
+
+\begin{frame}{I.3\quad Improving the baseline}
+\textbf{Held-out accuracy} --- full GSM8K test ($n{=}1319$, seed 42, greedy/exact); $\pm$95\% bootstrap CI and paired $\Delta$ vs.\ base over shared prompts.\ \ $\ast$: paired 95\% CI excludes 0;\ \ $\dagger$: collapse.
+\vspace{4pt}
+\begin{center}\small
+\renewcommand{\arraystretch}{1.08}
+\begin{tabular}{llrrr}
+\toprule
+Model & $(K,\beta)$, step & Acc.\,(\%) & 95\% CI & $\Delta$ base \\
+\midrule
+Base \code{gemma-3-1b-it} & --- & 47.4 & 44.7--50.0 & --- \\
+R0 (baseline) & $(2,.08)$ best 700 & 46.7 & 44.0--49.4 & $-0.7$\ n.s. \\
+R0 & $(2,.08)$ final 3364 & \bad{6.2} & 4.9--7.5 & \bad{$-41.2^{\dagger}$} \\
+R4 & $(2,0)$ best 1300 & 52.8 & 50.1--55.5 & $+5.4^{\ast}$ \\
+R4 & $(2,0)$ final 3364 & 48.6 & 45.9--51.3 & $+1.2$\ n.s. \\
+\run{R3b} & $(8,0)$ best 1000 & 55.7 & 53.0--58.2 & $+8.3^{\ast}$ \\
+\good{\run{R3b}} & $(8,0)$ \textbf{final 3364} & \good{\textbf{57.2}} & 54.6--59.9 & \good{$+9.9^{\ast}$} \\
+R5 & $(8,.08)$ best 1300 & 53.4 & 50.7--56.2 & $+6.1^{\ast}$ \\
+R5 & $(8,.08)$ final 3364 & 55.6 & 52.8--58.2 & $+8.2^{\ast}$ \\
+\bottomrule
 \end{tabular}
-\end{block}
-\footnotesize\textbf{5 full runs}, all controlled: same data (HF GSM8K, seed 42), eval, horizon (3364 steps) and rollout RNG (\code{PRNGKey(0)}). \emph{Only the named knob changes.}
-\end{column}
-\end{columns}
+\end{center}
+\vspace{3pt}
+{\footnotesize The $\beta$-axis extension \run{R1}\,$(2,.3)$ fell \bad{below base} (best 37.2 / final 0.0) --- a clean negative result.}
 \end{frame}
 
-\begin{frame}{I.3\quad Training curves: reward and KL (all 5 runs)}
+\begin{frame}{I.3\quad Improving the baseline}
 \begin{columns}[c]
-\begin{column}{0.56\textwidth}
-\centering
-\includegraphics[height=0.80\textheight,width=\linewidth,keepaspectratio]{F1_reward_kl.pdf}
+\begin{column}{0.52\textwidth}\centering
+\includegraphics[height=0.74\textheight,width=\linewidth,keepaspectratio]{F4_2x2_GxB.pdf}
 \end{column}
-\begin{column}{0.42\textwidth}
-\small
-\begin{itemize}
-  \item \bad{R0} over-optimises: reward peaks, then declines
-  \item \bad{R1} ($\beta{=}0.3$) \textbf{collapses} --- KL blow-up $\approx$ step 1700
-  \item \good{$K{=}8$} (R3b, R5) and R4 ($\beta{=}0$) stay \textbf{stable}
-\end{itemize}
+\begin{column}{0.46\textwidth}\small
+{\color{camgreen}\textbf{Prediction (1) holds.}}\ \ $K{=}8$ wins: \run{R3b} best at \textbf{57.2\%} ($+9.9$\,pp); both $K{=}8$ runs beat base and each beats its matched $K{=}2$ run. $K{=}2$ \textbf{peaks then degrades}, $K{=}8$ \textbf{improves monotonically} --- over-optimisation is a $K{=}2$ phenomenon.
 \vspace{6pt}
 
-\textbf{\bad{Note:}}\ \ a \emph{higher} $\beta$ did \emph{not} buy a lower KL or more stability --- the opposite of prediction (2).
-\end{column}
-\end{columns}
-\end{frame}
-
-\begin{frame}{I.3\quad Held-out accuracy (GSM8K test, $n{=}1319$)}
-\centering
-\includegraphics[width=0.96\linewidth]{F2_accuracy.pdf}\\[2pt]
-\begin{columns}[T]
-\begin{column}{0.62\textwidth}
-\small
-\begin{itemize}
-  \item \good{\textbf{R3b} ($K{=}8,\beta{=}0$): \textbf{57.2\%} final, $+9.9$\,pp over base} --- best model; paired 95\% CI excludes 0
-  \item Both $K{=}8$ runs beat base; each beats its matched $K{=}2$ run
-\end{itemize}
-\end{column}
-\begin{column}{0.36\textwidth}
-\small
-\begin{itemize}
-  \item \bad{R0 final $\to$ 6.2\%}; \bad{R1 final $\to$ 0.0\%} (below base --- a clean negative result)
-\end{itemize}
-\end{column}
-\end{columns}
-\end{frame}
-
-\begin{frame}{I.3\quad Collapse lives in one corner: $K{=}2,\ \beta>0$}
-\begin{columns}[c]
-\begin{column}{0.52\textwidth}
-\centering
-\includegraphics[height=0.76\textheight,width=\linewidth,keepaspectratio]{F4_2x2_GxB.pdf}
-\end{column}
-\begin{column}{0.46\textwidth}
-\small
-\begin{itemize}
-  \item Collapse occurs \alert{only} at $K{=}2,\ \beta>0$ (R0)
-  \item $K{=}2$ \textbf{peaks then degrades} (R4 $52.8\!\to\!48.6$; R0 collapses)
-  \item $K{=}8$ \textbf{improves monotonically} to the final step
-\end{itemize}
+{\color{camred}\textbf{Prediction (2) contradicted.}}\ \ The tighter KL leash did \emph{not} help: at $K{=}2$, $\beta{=}0$ beats $\beta{=}.08$ (R0 collapses) and $\beta{=}.3$ collapses \emph{faster}; at $K{=}8$ the KL weight is irrelevant (R3b vs.\ R5: $+1.7$\,pp, n.s.).
 \vspace{6pt}
 
-{\color{camgreen}\textbf{$\Rightarrow$}}\ \ Over-optimisation is a \textbf{$K{=}2$ phenomenon} --- exactly what the lower $\Var(\hat g)$ predicts.
+\textbf{Cure:} variance reduction (group size), \emph{not} regularisation --- echoing \href{https://arxiv.org/abs/2503.14476}{DAPO}.
 \end{column}
 \end{columns}
 \end{frame}
 
-\begin{frame}{I.3\quad Diagnostic --- the cost of $K{=}8$: group degeneracy}
+\begin{frame}{I.3\quad Improving the baseline}
 \begin{columns}[c]
 \begin{column}{0.60\textwidth}
 \centering
@@ -336,7 +288,7 @@ $K{=}8$ & \textbf{R3b} & R5 & --- \\
 \end{column}
 \begin{column}{0.38\textwidth}
 \small
-At $K{=}8$, about \textbf{a third of groups are degenerate} --- all $K$ rewards equal $\Rightarrow$ \textbf{zero advantage}, wasted samples (the known dead-group / effective-sample-size failure mode).
+\textbf{The cost of $K{=}8$: group degeneracy.}\ \ About \textbf{a third of groups are degenerate} --- all $K$ rewards equal $\Rightarrow$ \textbf{zero advantage}, wasted samples (the known dead-group / effective-sample-size failure mode).
 \vspace{6pt}
 
 Yet within-group $\sigma_r$ \textbf{holds $\approx1.5$} (steady, \emph{not} $\to0$).
@@ -345,24 +297,6 @@ Yet within-group $\sigma_r$ \textbf{holds $\approx1.5$} (steady, \emph{not} $\to
 The net effect is still \good{$+8$--$10$\,pp}.
 \end{column}
 \end{columns}
-\end{frame}
-
-\begin{frame}{I.3\quad Findings vs.\ the theory}
-\begin{columns}[T]
-\begin{column}{0.5\textwidth}
-\begin{exampleblock}{Prediction (1) \textbf{holds}}
-$K{=}8$ is the winning intervention. \textbf{Variance reduction} (group size) drives the $+8$--$10$\,pp; over-optimisation is confined to $K{=}2$.
-\end{exampleblock}
-\end{column}
-\begin{column}{0.5\textwidth}
-\begin{alertblock}{Prediction (2) \textbf{contradicted}}
-The tighter KL leash did \emph{not} help: $\beta{=}0$ beats $\beta{=}0.08$ at $K{=}2$; $\beta{=}0.3$ collapses \emph{faster}. At $K{=}8$ the KL weight is statistically irrelevant (R3b vs.\ R5: $+1.7$\,pp, n.s.).
-\end{alertblock}
-\end{column}
-\end{columns}
-\vspace{8pt}
-
-\textbf{Punchline:}\ \ the cure was \textbf{variance reduction} (larger groups), \emph{not} regularisation --- echoing \href{https://arxiv.org/abs/2503.14476}{DAPO}'s removal of the KL term for long-output RL.
 \end{frame}
 
 %============================================================
