@@ -116,19 +116,36 @@ W\&B:\ \href{https://wandb.ai/sichengma0514-university-of-cambridge/a8-grpo}{\te
 
 %============================================================
 \mysec{I.1  Reproducing the baseline}
-\begin{frame}{I.1\quad Reproducing the baseline --- the run \& patches}
-\textbf{(i) The run.}\ \ Baseline reproduced as run \run{R0} (\wb{8c2785ut}): the upstream
-\textbf{Tunix\,/\,JAX} GRPO pipeline (LoRA on frozen \code{gemma-3-1b-it}), commit
-\code{borisbolliet/tpu-2026@77c5a67}, run with the \code{config.py} defaults --- KL-penalty weight
-$\beta{=}0.08$, group size $K{=}2$ (responses sampled per prompt), the full \textbf{3364} GRPO steps
-(one epoch), \textbf{$\sim$5\,h\,05\,m} wall-clock on \code{v6e-1}.
+\begin{frame}{I.1\quad Reproducing the baseline --- the run}
+\textbf{(i) The run.}\ \ Baseline reproduced as run \run{R0} (\wb{8c2785ut}) --- upstream \code{borisbolliet/tpu-2026@77c5a67} at its shipped \code{config.py} defaults:
 \vspace{6pt}
 
-\textbf{Baseline patches}\ \ (fixes for what did not run as-shipped; full diff in \code{tpu-2026\_our\_changes.patch}):
-\begin{itemize}
-  \item TFDS's gsm8k builder crashes under protobuf 7.x once JAX imports --- we evaluate the \emph{identical} GSM8K test via an HF \code{datasets} fallback (seed 42);
-  \item raised checkpoint retention (\code{SAVE\_INTERVAL\_STEPS}\,$500{\to}100$, \code{MAX\_TO\_KEEP}\,$4{\to}40$) so the best-val checkpoint survives selection (persistence, not training).
+\begin{center}\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}>{\bfseries}l@{\quad}>{\raggedright\arraybackslash}p{0.72\linewidth}@{}}
+\toprule
+Model & \code{gemma-3-1b-it} (frozen) $+$ LoRA adapters --- rank $64$, $\alpha{=}64$ \\
+Algorithm & \textbf{GRPO} --- group-relative advantages $+$ KL penalty to $\pref$ \\
+Library & \textbf{Tunix} on \textbf{JAX} \\
+Dataset & GSM8K (from HF), train split --- \textbf{1 epoch} $=$ \textbf{3364} GRPO steps \\
+GRPO knobs & $\beta{=}0.08$ (KL weight),\ \ $K{=}2$ (responses per prompt),\ \ $\mu{=}1$ (one grad step per rollout batch) \\
+Optim.\ \& sampling & LR $3{\times}10^{-6}$ (10\% warmup), grad-clip $0.1$, temperature $0.9$, prompt $\leq256$ / generation $\leq768$ tokens \\
+Hardware & TPU \code{v6e-1} \\
+Wall-clock & $\sim$\textbf{5\,h\,04\,m} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{frame}
+
+%============================================================
+\begin{frame}{I.1\quad Reproducing the baseline --- baseline patches}
+\textbf{Baseline patches.}\ \ Fixes for what did not run as-shipped; full diff in \code{tpu-2026\_our\_changes.patch}.
+\vfill
+\begin{itemize}\setlength{\itemsep}{16pt}
+  \item TFDS's \code{gsm8k} builder crashes under protobuf 7.x once JAX imports --- we evaluate the \emph{identical} GSM8K test via an HF \code{datasets} fallback (seed 42).
+  \item Raised checkpoint retention (\code{SAVE\_INTERVAL\_STEPS}\,$500{\to}100$, \code{MAX\_TO\_KEEP}\,$4{\to}40$) so the \textbf{best-val checkpoint survives selection} (persistence, not training).
 \end{itemize}
+\vfill
 \end{frame}
 
 %============================================================
@@ -243,24 +260,24 @@ maximal at the baseline's $K{=}2$ --- the noisiest updates, which let the policy
 \vspace{4pt}
 \begin{center}\small
 \renewcommand{\arraystretch}{1.08}
-\begin{tabular}{llrrr}
+\begin{tabular}{llrrrr}
 \toprule
-Model & $(K,\beta)$, step & Acc.\,(\%) & 95\% CI & $\Delta$ base \\
+Model & $(K,\beta)$, step & Acc.\,(\%) & 95\% CI & $\Delta$ base & Wall-clock \\
 \midrule
-Base \code{gemma-3-1b-it} & --- & 47.4 & 44.7--50.0 & --- \\
-R0 (baseline) & $(2,.08)$ best 700 & 46.7 & 44.0--49.4 & $-0.7$\ n.s. \\
-R0 & $(2,.08)$ final 3364 & \bad{6.2} & 4.9--7.5 & \bad{$-41.2^{\dagger}$} \\
-R4 & $(2,0)$ best 1300 & 52.8 & 50.1--55.5 & $+5.4^{\ast}$ \\
-R4 & $(2,0)$ final 3364 & 48.6 & 45.9--51.3 & $+1.2$\ n.s. \\
-\run{R3b} & $(8,0)$ best 1000 & 55.7 & 53.0--58.2 & $+8.3^{\ast}$ \\
-\good{\run{R3b}} & $(8,0)$ \textbf{final 3364} & \good{\textbf{57.2}} & 54.6--59.9 & \good{$+9.9^{\ast}$} \\
-R5 & $(8,.08)$ best 1300 & 53.4 & 50.7--56.2 & $+6.1^{\ast}$ \\
-R5 & $(8,.08)$ final 3364 & 55.6 & 52.8--58.2 & $+8.2^{\ast}$ \\
+Base \code{gemma-3-1b-it} & --- & 47.4 & 44.7--50.0 & --- & --- \\
+R0 (baseline) & $(2,.08)$ best 700 & 46.7 & 44.0--49.4 & $-0.7$\ n.s. & \\
+R0 & $(2,.08)$ final 3364 & \bad{6.2} & 4.9--7.5 & \bad{$-41.2^{\dagger}$} & 5h04 \\
+R4 & $(2,0)$ best 1300 & 52.8 & 50.1--55.5 & $+5.4^{\ast}$ & \\
+R4 & $(2,0)$ final 3364 & 48.6 & 45.9--51.3 & $+1.2$\ n.s. & 4h37 \\
+\run{R3b} & $(8,0)$ best 1000 & 55.7 & 53.0--58.2 & $+8.3^{\ast}$ & \\
+\good{\run{R3b}} & $(8,0)$ \textbf{final 3364} & \good{\textbf{57.2}} & 54.6--59.9 & \good{$+9.9^{\ast}$} & \textbf{7h08} \\
+R5 & $(8,.08)$ best 1300 & 53.4 & 50.7--56.2 & $+6.1^{\ast}$ & \\
+R5 & $(8,.08)$ final 3364 & 55.6 & 52.8--58.2 & $+8.2^{\ast}$ & 7h21 \\
 \bottomrule
 \end{tabular}
 \end{center}
-\vspace{3pt}
-{\footnotesize The $\beta$-axis extension \run{R1}\,$(2,.3)$ fell \bad{below base} (best 37.2 / final 0.0) --- a clean negative result.}
+\vspace{0pt}
+{\footnotesize Wall-clock $=$ \textbf{full-run} cost on \code{v6e-1} (all runs 3364 steps); the best checkpoint is only identifiable \emph{after} the full run. $K{=}8$ buys $+9.9$\,pp for ${\sim}1.4\times$ the compute. \run{R1}\,$(2,.3)$ fell \bad{below base} (best 37.2 / final 0.0).}
 \end{frame}
 
 \begin{frame}{I.3\quad Improving the baseline}
