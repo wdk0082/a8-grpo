@@ -24,8 +24,12 @@
 \definecolor{cammid}{HTML}{2A6EBB}    % mid blue — links / secondary
 \definecolor{camred}{HTML}{B5121B}    % collapse / negative result
 \definecolor{camgreen}{HTML}{2E7D32}  % winning result
+\definecolor{colK}{HTML}{1F6FB2}      % K axis    — prediction (1); neutral, not a verdict
+\definecolor{colB}{HTML}{7B3FA0}      % beta axis — prediction (2); neutral, not a verdict
 \definecolor{camboxhd}{HTML}{A9C7E8}  % light-blue box header
 \definecolor{camboxbd}{HTML}{EDF3FA}  % pale-blue box body
+\newcommand{\kcol}[1]{\textcolor{colK}{#1}}
+\newcommand{\bcol}[1]{\textcolor{colB}{#1}}
 
 \setbeamercolor{structure}{fg=camblue}
 \setbeamercolor{title}{fg=camblue}
@@ -239,20 +243,32 @@ The dense \textbf{shaping} terms keep $\sigma_r>0$ and push toward parseable out
 \end{frame}
 
 \begin{frame}{I.3\quad Improving the baseline}
+\setlength{\abovedisplayskip}{2pt}\setlength{\belowdisplayskip}{2pt}
 \textbf{Why R0 fails.}\ \ The group-mean gradient has variance
 \[
   \Var(\hat g)=\frac{1}{K^2}\sum_i (h_i-\bar h)(h_i-\bar h)^\top = O(1/K),
 \]
-maximal at the baseline's $K{=}2$ --- the noisiest updates, which let the policy chase the dense \textbf{shaping} reward (reward-hacking) while true correctness decays.
-\vspace{5pt}
+maximal at the baseline's $\kcol{K{=}2}$ --- the noisiest updates, which let the policy chase the dense \textbf{shaping} reward while true correctness decays.
+\vspace{1pt}
 
 \textbf{Two predictions:}
 \begin{itemize}
-  \item[\textcolor{camgreen}{\textbf{(1)}}] \textbf{Variance.}\ \ Raising $K$ shrinks $\Var(\hat g)\propto1/K$ $\Rightarrow$ smoother updates, \textbf{milder over-optimisation}.
-  \item[\textcolor{camgreen}{\textbf{(2)}}] \textbf{KL leash.}\ \ The reference-KL already climbs well above $1$ (previous slide), so a \emph{larger} $\beta$ (tighter KL penalty) might rein in the reward-hacking.
+  \item[\kcol{\textbf{(1)}}] \kcol{\textbf{Variance.}}\ \ Raising the group size $\kcol{K}$ shrinks $\Var(\hat g)\propto1/\kcol{K}$ $\Rightarrow$ smoother updates, \textbf{milder over-optimisation}.
+  \item[\bcol{\textbf{(2)}}] \bcol{\textbf{KL leash.}}\ \ The reference-KL already climbs well above $1$ (previous slide), so a \emph{larger} KL weight $\bcol{\beta}$ (tighter penalty) might rein in the reward-hacking.
 \end{itemize}
-\vspace{3pt}
-\textbf{Test:}\ \ a controlled $\beta\times K$ 2$\times$2 --- \run{R4}$(2,0)$, \run{R0}$(2,.08)$, \run{R3b}$(8,0)$, \run{R5}$(8,.08)$ --- plus \run{R1}$(2,.3)$; \textbf{5 runs}, only the named knob changes.
+\vspace{2pt}
+
+\textbf{Test:}\ \ \textbf{5 controlled runs} \run{R\#}$(\kcol{K},\bcol{\beta})$ --- the $\kcol{K}$ rows test \kcol{(1)}, the $\bcol{\beta}$ columns test \bcol{(2)}; only the named knob changes:
+\vspace{0pt}
+
+{\footnotesize
+\renewcommand{\arraystretch}{1.05}
+\centering
+\begin{tabular}{c|ccc}
+ & $\bcol{\beta{=}0}$ & $\bcol{\beta{=}0.08}$ & $\bcol{\beta{=}0.3}$ \\ \hline
+$\kcol{K{=}2}$ & \run{R4} & \run{R0}\ (baseline) & \run{R1} \\
+$\kcol{K{=}8}$ & \run{R3b} & \run{R5} & --- \\
+\end{tabular}\par}
 \end{frame}
 
 \begin{frame}{I.3\quad Improving the baseline}
