@@ -105,14 +105,25 @@ Multi-Agent Systems \& Agentic AI --- Practical Examination}
 \mysec{Overview}
 \begin{frame}[plain]
 \centering
-\vspace{1.6cm}
+\vspace{2.1cm}
+{\color{camblue}\rule{0.92\textwidth}{1.1pt}}\\[14pt]
+{\LARGE\bfseries Multi-Agent Systems \& Agentic AI\\[4pt] Practical Examination}\\[14pt]
+{\color{camblue}\rule{0.92\textwidth}{1.1pt}}
+\vspace{1.7cm}
+
+{\large Zixuan Wang\ \ (zw499)}
+\end{frame}
+
+%============================================================
+\begin{frame}[plain]
+\centering
+\vspace{1.7cm}
 {\color{camblue}\rule{0.92\textwidth}{1.1pt}}\\[12pt]
 {\LARGE\bfseries Part I:\ \ GRPO Finetuning of\\[3pt] \texttt{gemma-3-1b-it} on GSM8K}\\[12pt]
 {\color{camblue}\rule{0.92\textwidth}{1.1pt}}
-\vspace{1.35cm}
+\vspace{1.5cm}
 
-{\large Zixuan Wang\ \ (zw499)}\\[6pt]
-{\small Team \textbf{chmawa}:\ \ sm3035\ \ $\cdot$\ \ bc654\ \ $\cdot$\ \ zw499}\\[1.2cm]
+{\small Team \textbf{chmawa}:\ \ sm3035\ \ $\cdot$\ \ bc654\ \ $\cdot$\ \ zw499}\\[1.1cm]
 
 {\footnotesize Code:\ \href{https://github.com/wdk0082/a8-grpo}{\texttt{github.com/wdk0082/a8-grpo}}\quad$\mid$\quad
 W\&B:\ \href{https://wandb.ai/sichengma0514-university-of-cambridge/a8-grpo}{\texttt{a8-grpo}}}
@@ -393,11 +404,11 @@ R5 & $(8,.08)$ final 3364 & 55.6 & 52.8--58.2 & $+8.2^{\ast}$ & 7h21 \\
 \end{columns}
 \end{frame}
 
-\begin{frame}{Part II\quad Problems $\rightarrow$ proposed fixes\ \ (1/2)}
+\begin{frame}{Part II\quad Problems $\rightarrow$ proposed fixes}
 \vfill
 \begin{center}
 {\small
-\renewcommand{\arraystretch}{1.45}
+\renewcommand{\arraystretch}{1.4}
 \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.45\linewidth}@{\ \ $\rightarrow$\ \ }>{\raggedright\arraybackslash}p{0.45\linewidth}@{}}
 \toprule
 \multicolumn{1}{@{}c}{\textbf{\bad{Problem}}} & \multicolumn{1}{c@{}}{\textbf{\good{Fix}}}\\
@@ -405,31 +416,12 @@ R5 & $(8,.08)$ final 3364 & 55.6 & 52.8--58.2 & $+8.2^{\ast}$ & 7h21 \\
 \addlinespace[1ex]
 \textbf{P1 Termination not \emph{guaranteed}} --- the replanned tail can grow unboundedly; no monotone-decreasing quantity; \code{recursion\_limit} \emph{raises}, not finishes.
 & Thread a \textbf{revision budget / max-steps}; routers finish gracefully; reject over-long tails. \emph{(A hard cap can truncate a genuine expansion.)}\\
-\addlinespace[3.5ex]
+\addlinespace[2.5ex]
 \textbf{P2 Adaptation only on \emph{success}} --- a \code{fulfilled=False} step routes straight to END; no retry or route-around.
 & Add a \textbf{recovery / repair path} on failure with a per-step retry budget. \emph{(Needs a recoverable-vs-fatal flag.)}\\
-\addlinespace[1ex]
-\bottomrule
-\end{tabular}}
-\end{center}
-\vfill
-\end{frame}
-
-\begin{frame}{Part II\quad Problems $\rightarrow$ proposed fixes\ \ (2/2)}
-\vfill
-\begin{center}
-{\small
-\renewcommand{\arraystretch}{1.45}
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.45\linewidth}@{\ \ $\rightarrow$\ \ }>{\raggedright\arraybackslash}p{0.45\linewidth}@{}}
-\toprule
-\multicolumn{1}{@{}c}{\textbf{\bad{Problem}}} & \multicolumn{1}{c@{}}{\textbf{\good{Fix}}}\\
-\midrule
-\addlinespace[1ex]
+\addlinespace[2.5ex]
 \textbf{P3 Replanned tail \emph{bypasses} the reviewer} that gates the initial plan --- \code{merge\_plan} splices it unchecked.
 & Route \code{new\_tail} through the \textbf{existing \code{plan\_reviewer}} for one critique round. \emph{(One extra reviewer call.)}\\
-\addlinespace[3.5ex]
-\textbf{P4 Partial-state feedback at unconditional cost} --- sees only the \emph{last} step (Markov); fires every step.
-& \textbf{Full-history, gated} review --- cheap model / skip when no downstream impact. \emph{(Gate conservatively.)}\\
 \addlinespace[1ex]
 \bottomrule
 \end{tabular}}
